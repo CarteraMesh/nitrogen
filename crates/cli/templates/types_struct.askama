@@ -1,0 +1,56 @@
+{%- if type_data.requires_imports %}
+use super::*;
+{%- endif %}
+
+{%- match type_data.kind %}
+
+{%- when TypeKind::Struct %}
+
+{%- if type_data.fields.len() == 0 %}
+#[derive(Debug, borsh::BorshSerialize ,serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
+{%- else %}
+#[derive(Debug, borsh::BorshSerialize ,bon::Builder, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
+{%- endif %}
+pub struct {{ type_data.name }} {
+    {%- for field in type_data.fields %}
+    {%- if let Some(attributes) = field.attributes %}
+    {{ attributes }}
+    {%- endif %}
+    pub {{ field.name }}: {{ field.rust_type }},
+    {%- endfor %}
+}
+
+{%- when TypeKind::TupleStruct %}
+
+#[derive(borsh::BorshSerialize, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
+pub struct {{ type_data.name }} (
+    {%- for field in type_data.fields %}
+    pub {{ field.rust_type }},
+    {%- endfor %}
+);
+{%- when TypeKind::Enum with (variants) %}
+
+#[derive(borsh::BorshSerialize, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
+pub enum {{ type_data.name }} {
+    {%- for variant in variants %}
+    {{ variant.name -}}
+    {%- if let Some(fields) = variant.fields %}
+        {%- match fields %}
+            {%- when EnumVariantFields::Named with (field_datas) %}
+                {
+                    {%- for field in field_datas %}
+                    {{ field.name }}: {{ field.rust_type }},
+                    {%- endfor %}
+                }
+            {%- when EnumVariantFields::Unnamed with (unnameds) %}
+                (
+                    {%- for rust_type in unnameds %}
+                    {{ rust_type -}},
+                    {%- endfor %}
+                )
+        {%- endmatch %}
+    {% endif %},
+    {%- endfor %}
+}
+
+{% endmatch %}

@@ -1,0 +1,18 @@
+use super::{{ decoder_name }};
+
+{%- for instruction in instructions %}
+pub mod {{ instruction.module_name }};
+{%- endfor %}
+{%- for event in events %}
+pub mod {{ event.module_name }};
+{%- endfor %}
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug, Clone, Hash)]
+pub enum {{ program_instruction_enum }} {
+    {%- for instruction in instructions %}
+    {{ instruction.struct_name }}({{ instruction.module_name }}::{{ instruction.struct_name }}),
+    {%- endfor %}
+    {%- for event in events %}
+    {{ event.struct_name }}({{ event.module_name }}::{{ event.struct_name }}),
+    {%- endfor %}
+}

@@ -1,0 +1,12 @@
+{%- if account.requires_imports %}
+use super::super::types::*;
+{%- endif %}
+
+pub struct {{ account.struct_name }} {
+    {%- for field in account.fields %}
+        {%- if let Some(attributes) = field.attributes %}
+        {{ attributes }}
+        {%- endif %}
+        pub {{ field.name }}: {{ field.rust_type }},
+    {%- endfor %}
+}

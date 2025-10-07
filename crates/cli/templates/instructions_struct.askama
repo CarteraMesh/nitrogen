@@ -1,0 +1,71 @@
+{%- if instruction.requires_imports %}
+use super::super::types::*;
+{%- endif %}
+{% raw %}
+use {solana_instruction::AccountMeta, solana_pubkey::Pubkey};
+{% endraw %}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
+pub struct {{ instruction.struct_name }}{
+    {%- for arg in instruction.args %}
+    pub {{ arg.name }}: {{ arg.rust_type }},
+    {%- endfor %}
+}
+
+impl borsh::BorshSerialize for {{ instruction.struct_name }} {
+    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        writer.write_all({{ instruction.discriminator }})?;
+        {%- for arg in instruction.args %}
+        self.{{ arg.name }}.serialize(writer)?;
+        {%- endfor %}
+        Ok(())
+    }
+}
+
+impl {{ instruction.struct_name }} {
+    pub fn build(&self,
+        {%- for account in instruction.accounts %}
+            {%- if account.pda.is_none() %}
+              {%- if account.address.is_none() %}
+            {{ account.name }}: {% if account.is_optional %}Option<Pubkey>{% else %}Pubkey{% endif %},
+              {%- endif %}
+            {%- endif %}
+        {%- endfor %}
+        {%- for pt in instruction.param_types %}
+            {{ pt.name }}: {{ pt.rust_type }},
+        {%- endfor %}
+    ) -> solana_instruction::Instruction {
+         let mut accounts: Vec<AccountMeta> = Vec::with_capacity({{ instruction.accounts.len() }});
+         {%- for account in instruction.accounts %}
+           {%- if let Some(pda) = account.pda %}
+         accounts.push(crate::derive_pda(&[
+             {%- for seed in pda.seeds %}
+               {%- if let Some(pt) = seed.param_type %}
+         {{ pt }},
+               {%- else if let Some(data) = seed.value %}
+         {{ data }},
+               {%- else if let Some(path) = seed.path %}
+         {{ path }}.as_ref(),
+               {%- endif %}
+             {%- endfor %}
+         ], &crate::ID, {{ !account.is_mut }}));
+           {%- else if account.is_optional %}
+            if Some(pk) = {{ account.name }} {
+                accounts.push(AccountMeta::new_readonly(pk, {{ account.is_signer }}));
+            }
+           // {{ account.name }} is optional
+           {%- else %}
+             {%- if let Some(addr) = account.address %}
+         accounts.push(AccountMeta::new_readonly(solana_pubkey::pubkey!("{{ addr }}"), {{ account.is_signer }}));
+             {%- else %}
+               {%- if account.is_mut %}
+         accounts.push(AccountMeta::new({{ account.name }}, {{ account.is_signer }}));
+               {%- else %}
+         accounts.push(AccountMeta::new_readonly({{ account.name }}, {{ account.is_signer }}));
+               {%- endif %}
+             {%- endif %}
+           {%- endif %}
+         {%- endfor %}
+        solana_instruction::Instruction::new_with_borsh(crate::ID, self, accounts)
+    }
+}

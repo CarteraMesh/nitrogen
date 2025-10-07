@@ -1,0 +1,104 @@
+[workspace]
+members = ["crates/*", "encoders/*", "examples/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/carteraMesh/nitrogen"
+
+[workspace.lints.clippy]
+collapsible_if = "allow"
+vec_init_then_push = "allow"
+too_many_arguments = "allow"
+
+[workspace.dependencies]
+# other
+alloy-primitives  = "1"
+anyhow = "1.0.96"
+askama = "0.12.1"
+async-trait = { version = "0.1.86" }
+base64 = "0.22.1"
+bincode = "1.3.3"
+bon = "3"
+borsh = { version = "1.5.1" }
+borsh-derive-internal = "0.10.3"
+bs58 = { version = "0.5.1", default-features = false }
+
+carbon-core = { version = "0.10.0" }
+
+# misc
+chrono = { version = "0.4.40", features = ["serde"] }
+clap = { version = "4.5.30", features = ["derive"] }
+console = "0.15.8"
+dialoguer = { version = "0.11.0", default-features = false, features = ["editor"] }
+dotenv = "0.15.0"
+env_logger = "0.11.5"
+flate2 = "1.0.35"
+futures = "0.3.30"
+futures-util = "0.3.31"
+heck = "0.5.0"
+helius = { version = "0.3.1" }
+hex = "0.4.3"
+indicatif = "0.17.8"
+inquire = "0.7.5"
+juniper = { version = "0.16.1", features = ["uuid"] }
+juniper_axum = { version = "0.2.0" }
+juniper_codegen = { version = "0.16.0" }
+juniper_graphql_ws = { version = "0.4.0", features = ["graphql-transport-ws"] }
+log = "0.4.25"
+metrics = "0.24.1"
+metrics-exporter-prometheus = "0.16.0"
+nitrogen-circle-message-transmitter-v2-encoder  = { path = "./encoders/circle-message-transmitter-v2-encoder", version = "0.1.0" }
+
+nitrogen-circle-token-messenger-minter-v2-encoder = { path = "./encoders/circle-token-messenger-minter-v2-encoder", version = "0.1.0" }
+paste = "1.0.15"
+proc-macro2 = "1"
+prost = "0.13.5"
+prost-types = "0.13.5"
+quote = "1.0"
+reqwest = { version = "0.12.22", default-features = false, features = ["json", "rustls-tls"] }
+retry = "2.0.0"
+rust_decimal = { version = "1.36.0", features = ["db-postgres"] }
+serde = { version = "1.0.208", features = ["derive"] }
+serde-big-array = "0.5.1"
+serde_json = "1.0.138"
+sha2 = "0.10.8"
+
+# solana
+solana-account = "2"
+solana-account-decoder = "2"
+solana-account-decoder-client-types = "2"
+solana-client = "2"
+solana-clock = "~2.2"
+solana-commitment-config = "~2.2"
+solana-entry = "^2.3.6"
+solana-hash = "2"
+solana-instruction = { version = "2", default-features = false, features = ["borsh"] }
+solana-keypair = { version = "2" }
+solana-message = "2"
+solana-native-token = "~2.3"
+solana-program = "~2.2"
+solana-program-pack = "~2.2"
+solana-pubkey = { version = "2", features = ["serde", "borsh", "curve25519"] }
+solana-rpc-client = { version = "2", default-features = false }
+solana-rpc-client-api = { version = "2" }
+solana-signature = { version = "2", features = ["rand"] }
+solana-signer = { version = "2" }
+solana-transaction = { version = "2", features = ["bincode"] }
+solana-transaction-context = "2"
+solana-transaction-status = "2"
+spl-associated-token-account = "7"
+
+spl-memo = "6"
+spl-token = "7"
+syn = { version = "1.0", features = ["full"] }
+thiserror = { version = "2.0.12", default-features = false }
+tokio = { version = "1", features = ["rt", "time", "signal", "macros"] }
+tokio-retry = "0.3.0"
+tokio-util = "0.7.15"
+tonic = { version = "0.13.1", features = ["tls-native-roots", "tls-webpki-roots"] }
+tonic-build = "0.13.1"
+unicode-xid = "0.2"
+uuid = { version = "1.6.1", features = ["serde", "v7"] }

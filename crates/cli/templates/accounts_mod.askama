@@ -1,0 +1,11 @@
+use super::{{ decoder_name }};
+
+{%- for account in accounts %}
+pub mod {{ account.module_name -}};
+{%- endfor %}
+
+pub enum {{ program_struct_name }} {
+    {%- for account in accounts %}
+        {{ account.struct_name }}({{ account.module_name }}::{{ account.struct_name }}),
+    {%- endfor %}
+}

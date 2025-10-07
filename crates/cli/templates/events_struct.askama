@@ -1,0 +1,10 @@
+{%- if event.requires_imports %}
+use super::super::types::*;
+{%- endif %}
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug, Clone, Hash)]
+pub struct {{ event.struct_name }}{
+    {%- for arg in event.args %}
+    pub {{ arg.name }}: {{ arg.rust_type }},
+    {%- endfor %}
+}
