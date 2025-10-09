@@ -1,5 +1,13 @@
 #[derive(
-    Debug, borsh::BorshSerialize, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash,
+    Debug,
+    borsh::BorshSerialize,
+    bon::Builder,
+    serde::Serialize,
+    serde::Deserialize,
+    PartialEq,
+    Eq,
+    Clone,
+    Hash,
 )]
 pub struct MessageReceived {
     pub caller: solana_pubkey::Pubkey,

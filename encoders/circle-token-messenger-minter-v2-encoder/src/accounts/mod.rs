@@ -1,3 +1,4 @@
+use super::TokenMessengerMinterV2Encoder;
 pub mod denylisted_account;
 pub mod local_token;
 pub mod message_transmitter;

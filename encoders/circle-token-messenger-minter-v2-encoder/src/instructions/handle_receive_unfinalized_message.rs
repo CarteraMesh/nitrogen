@@ -22,8 +22,8 @@ impl HandleReceiveUnfinalizedMessage {
         token_pair: Pubkey,
         recipient_token_account: Pubkey,
         program: Pubkey,
-        local_token_type: LocalToken,
         token_messenger_type: TokenMessenger,
+        local_token_type: LocalToken,
     ) -> solana_instruction::Instruction {
         let mut accounts: Vec<AccountMeta> = Vec::with_capacity(12);
         accounts.push(crate::derive_pda(

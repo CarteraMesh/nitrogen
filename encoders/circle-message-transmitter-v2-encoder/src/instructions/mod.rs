@@ -1,27 +1,17 @@
+use super::MessageTransmitterV2Encoder;
 pub mod accept_ownership;
-pub mod attester_disabled_event;
-pub mod attester_enabled_event;
-pub mod attester_manager_updated_event;
 pub mod disable_attester;
 pub mod enable_attester;
 pub mod initialize;
 pub mod is_nonce_used;
-pub mod max_message_body_size_updated_event;
-pub mod message_received_event;
-pub mod ownership_transfer_started_event;
-pub mod ownership_transferred_event;
 pub mod pause;
-pub mod pause_event;
-pub mod pauser_changed_event;
 pub mod receive_message;
 pub mod reclaim_event_account;
 pub mod send_message;
 pub mod set_max_message_body_size;
 pub mod set_signature_threshold;
-pub mod signature_threshold_updated_event;
 pub mod transfer_ownership;
 pub mod unpause;
-pub mod unpause_event;
 pub mod update_attester_manager;
 pub mod update_pauser;
 
@@ -42,19 +32,4 @@ pub enum MessageTransmitterV2Instruction {
     Unpause(unpause::Unpause),
     UpdateAttesterManager(update_attester_manager::UpdateAttesterManager),
     UpdatePauser(update_pauser::UpdatePauser),
-    AttesterDisabledEvent(attester_disabled_event::AttesterDisabledEvent),
-    AttesterEnabledEvent(attester_enabled_event::AttesterEnabledEvent),
-    AttesterManagerUpdatedEvent(attester_manager_updated_event::AttesterManagerUpdatedEvent),
-    MaxMessageBodySizeUpdatedEvent(
-        max_message_body_size_updated_event::MaxMessageBodySizeUpdatedEvent,
-    ),
-    MessageReceivedEvent(message_received_event::MessageReceivedEvent),
-    OwnershipTransferStartedEvent(ownership_transfer_started_event::OwnershipTransferStartedEvent),
-    OwnershipTransferredEvent(ownership_transferred_event::OwnershipTransferredEvent),
-    PauseEvent(pause_event::PauseEvent),
-    PauserChangedEvent(pauser_changed_event::PauserChangedEvent),
-    SignatureThresholdUpdatedEvent(
-        signature_threshold_updated_event::SignatureThresholdUpdatedEvent,
-    ),
-    UnpauseEvent(unpause_event::UnpauseEvent),
 }

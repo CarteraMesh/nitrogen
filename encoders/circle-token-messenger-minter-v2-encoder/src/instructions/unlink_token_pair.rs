@@ -29,7 +29,7 @@ impl UnlinkTokenPair {
         accounts.push(crate::derive_pda(
             &[
                 b"token_pair",
-                token_pair_type.remote_domain.to_le_bytes().as_ref(),
+                token_pair_type.remote_domain.as_ref(),
                 token_pair_type.remote_token.as_ref(),
             ],
             &crate::ID,
