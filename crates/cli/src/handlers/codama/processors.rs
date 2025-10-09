@@ -3,7 +3,6 @@ use {
         types::{EnumVariantTypeNode, ProgramNode, SignerType, TypeNode},
         utils::{
             get_account_discriminator,
-            get_event_discriminator,
             get_instruction_discriminator,
             map_type,
             resolve_struct_type,
@@ -11,7 +10,6 @@ use {
     },
     crate::{
         accounts::{AccountData, FieldData as AccountFieldData},
-        events::EventData,
         instructions::{AccountMetaData, ArgumentData, InstructionData},
         types::{EnumVariantData, EnumVariantFields, FieldData, TypeData, TypeKind},
     },
@@ -118,9 +116,8 @@ pub fn process_codama_instructions(program: &ProgramNode) -> Vec<InstructionData
 pub fn process_codama_defined_types(
     program: &ProgramNode,
     event_hints: &HashSet<String>,
-) -> (Vec<TypeData>, Vec<EventData>) {
+) -> Vec<TypeData> {
     let mut types_data = Vec::new();
-    let mut events_data = Vec::new();
 
     for defined_type in &program.defined_types {
         let mut requires_imports = false;
@@ -218,29 +215,7 @@ pub fn process_codama_defined_types(
             _ => continue, // Skip unsupported type nodes for now.
         }
 
-        let module_name = name.to_snake_case();
-        let struct_name = name.to_upper_camel_case();
-
-        if event_hints.contains(&name) {
-            let discriminator = get_event_discriminator(&name);
-            let args = fields
-                .into_iter()
-                .map(|f| crate::events::ArgumentData {
-                    name: f.name,
-                    rust_type: f.rust_type,
-                })
-                .collect();
-
-            let event = EventData {
-                struct_name,
-                module_name,
-                discriminator,
-                args,
-                requires_imports,
-            };
-
-            events_data.push(event);
-        } else {
+        if !event_hints.contains(&name) {
             types_data.push(TypeData {
                 name,
                 fields,
@@ -250,5 +225,5 @@ pub fn process_codama_defined_types(
         }
     }
 
-    (types_data, events_data)
+    types_data
 }

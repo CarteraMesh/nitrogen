@@ -1,21 +1,10 @@
 use {
     crate::{
-        accounts::{
-            AccountsModTemplate,
-            AccountsStructTemplate,
-            legacy_process_accounts,
-            process_accounts,
-        },
-        events::{EventsStructTemplate, legacy_process_events, process_events},
-        instructions::{
-            InstructionsModTemplate,
-            InstructionsStructTemplate,
-            legacy_process_instructions,
-            process_instructions,
-        },
+        accounts::{AccountsModTemplate, AccountsStructTemplate, process_accounts},
+        instructions::{InstructionsModTemplate, InstructionsStructTemplate, process_instructions},
         project::{DataSourceData, DecoderData, MetricsData, ProjectTemplate},
-        types::{TypeStructTemplate, legacy_process_types, process_types},
-        util::{is_big_array, legacy_read_idl, read_idl},
+        types::{TypeStructTemplate, process_types},
+        util::{is_big_array, read_idl},
     },
     anyhow::{Result, bail},
     askama::Template,
@@ -27,13 +16,12 @@ use {
 };
 
 pub fn parse(path: String, output: String, crate_name: Option<String>) -> Result<()> {
-    let (accounts_data, instructions_data, types_data, events_data, program_name, program_id) =
+    let (accounts_data, instructions_data, types_data, program_name, program_id) =
         match read_idl(&path) {
             Ok(idl) => {
                 let accounts_data = process_accounts(&idl);
                 let instructions_data = process_instructions(&idl);
                 let types_data = process_types(&idl);
-                let events_data = process_events(&idl);
                 let program_name = idl.metadata.name;
                 let program_id = idl.address;
 
@@ -41,32 +29,13 @@ pub fn parse(path: String, output: String, crate_name: Option<String>) -> Result
                     accounts_data,
                     instructions_data,
                     types_data,
-                    events_data,
                     program_name,
                     program_id,
                 )
             }
-            Err(_legacy_idl_err) => match legacy_read_idl(&path) {
-                Ok(idl) => {
-                    let accounts_data = legacy_process_accounts(&idl);
-                    let instructions_data = legacy_process_instructions(&idl);
-                    let types_data = legacy_process_types(&idl);
-                    let events_data = legacy_process_events(&idl);
-                    let program_name = idl.name;
-
-                    (
-                        accounts_data,
-                        instructions_data,
-                        types_data,
-                        events_data,
-                        program_name,
-                        String::new(),
-                    )
-                }
-                Err(idl_err) => {
-                    bail!("{idl_err}");
-                }
-            },
+            Err(idl_err) => {
+                bail!("{idl_err}");
+            }
         };
 
     let encoder_name = format!("{}Encoder", program_name.to_upper_camel_case());
@@ -173,21 +142,10 @@ pub fn parse(path: String, output: String, crate_name: Option<String>) -> Result
         println!("Generated {}", filename);
     }
 
-    for event in &events_data {
-        let template = EventsStructTemplate { event };
-        let rendered = template
-            .render()
-            .expect("Failed to render event struct template");
-        let filename = format!("{}/{}.rs", instructions_dir, event.module_name);
-        fs::write(&filename, rendered).expect("Failed to write event struct file");
-        println!("Generated {}", filename);
-    }
-
     let instructions_mod_template = InstructionsModTemplate {
         instructions: &instructions_data,
         decoder_name: encoder_name.clone(),
         program_instruction_enum: program_instruction_enum.clone(),
-        events: &events_data,
     };
     let instructions_mod_rendered = instructions_mod_template
         .render()

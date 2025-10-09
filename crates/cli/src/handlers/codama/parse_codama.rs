@@ -1,7 +1,6 @@
 use {
     crate::{
         accounts::{AccountsModTemplate, AccountsStructTemplate},
-        events::EventsStructTemplate,
         handlers::codama::{
             processors::{
                 process_codama_accounts,
@@ -26,29 +25,22 @@ pub fn parse_codama(
     crate_name: Option<String>,
     event_hints: Option<String>,
 ) -> Result<()> {
-    let (accounts_data, instructions_data, types_data, events_data, program_name) =
-        match read_codama_idl(&path) {
-            Ok(idl) => {
-                let accounts_data = process_codama_accounts(&idl.program);
-                let instructions_data = process_codama_instructions(&idl.program);
+    let (accounts_data, instructions_data, types_data, program_name) = match read_codama_idl(&path)
+    {
+        Ok(idl) => {
+            let accounts_data = process_codama_accounts(&idl.program);
+            let instructions_data = process_codama_instructions(&idl.program);
 
-                let event_hints = parse_event_hints(event_hints);
-                let (types_data, events_data) =
-                    process_codama_defined_types(&idl.program, &event_hints);
-                let program_name = idl.program.name;
+            let event_hints = parse_event_hints(event_hints);
+            let types_data = process_codama_defined_types(&idl.program, &event_hints);
+            let program_name = idl.program.name;
 
-                (
-                    accounts_data,
-                    instructions_data,
-                    types_data,
-                    events_data,
-                    program_name,
-                )
-            }
-            Err(error) => {
-                bail!("Error parsing Codama IDL: {error}");
-            }
-        };
+            (accounts_data, instructions_data, types_data, program_name)
+        }
+        Err(error) => {
+            bail!("Error parsing Codama IDL: {error}");
+        }
+    };
 
     let decoder_name = format!("{}Decoder", program_name.to_upper_camel_case());
     let decoder_name_kebab = program_name.to_kebab_case();
@@ -156,21 +148,10 @@ pub fn parse_codama(
         println!("Generated {}", filename);
     }
 
-    for event in &events_data {
-        let template = EventsStructTemplate { event };
-        let rendered = template
-            .render()
-            .expect("Failed to render event struct template");
-        let filename = format!("{}/{}.rs", instructions_dir, event.module_name);
-        fs::write(&filename, rendered).expect("Failed to write event struct file");
-        println!("Generated {}", filename);
-    }
-
     let instructions_mod_template = InstructionsModTemplate {
         instructions: &instructions_data,
         decoder_name: decoder_name.clone(),
         program_instruction_enum: program_instruction_enum.clone(),
-        events: &events_data,
     };
     let instructions_mod_rendered = instructions_mod_template
         .render()

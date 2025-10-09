@@ -5,11 +5,10 @@ use {
 
 pub mod accounts;
 pub mod commands;
-pub mod events;
 pub mod handlers;
 pub mod idl;
 pub mod instructions;
-pub mod legacy_idl;
+mod legacy_idl;
 pub mod project;
 pub mod types;
 pub mod util;

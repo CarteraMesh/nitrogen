@@ -1,6 +1,5 @@
 use {
     crate::{
-        events::EventData,
         idl::{Idl, IdlPda, IdlPdaSeed},
         legacy_idl::{LegacyIdl, LegacyIdlInstructionDiscriminant},
         util::idl_type_to_rust_type,
@@ -210,7 +209,6 @@ pub struct InstructionsModTemplate<'a> {
     pub instructions: &'a Vec<InstructionData>,
     pub decoder_name: String,
     pub program_instruction_enum: String,
-    pub events: &'a Vec<EventData>,
 }
 
 pub fn legacy_process_instructions(idl: &LegacyIdl) -> Vec<InstructionData> {

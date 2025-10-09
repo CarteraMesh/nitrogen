@@ -206,15 +206,6 @@ pub fn get_account_discriminator(account_node: &AccountNode, account_name: &str)
     format!("0x{}", hex::encode(discriminator_bytes))
 }
 
-pub fn get_event_discriminator(event_name: &str) -> String {
-    let mut hasher = Sha256::new();
-    let discriminator_input = format!("event:{}", event_name);
-    hasher.update(discriminator_input.as_bytes());
-    let hash = hasher.finalize();
-    let discriminator_bytes = &hash[..8];
-    format!("0xe445a52e51cb9a1d{}", hex::encode(discriminator_bytes))
-}
-
 pub fn read_codama_idl(idl_path: &str) -> Result<RootNode> {
     let file = File::open(idl_path).expect("Failed to open file");
     match serde_json::from_reader(file) {
