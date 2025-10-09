@@ -68,7 +68,7 @@ sha2 = "0.10.8"
 
 # solana
 solana-account = "2"
-solana-account-decoder = "2"
+solana-account-decoder = "3"
 solana-account-decoder-client-types = "2"
 solana-client = "2"
 solana-clock = "~2.2"
