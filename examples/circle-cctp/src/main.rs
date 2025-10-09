@@ -139,7 +139,7 @@ pub async fn main() -> Result<()> {
                     amount,
                     destination_domain: destination_chain,
                     mint_recipient,
-                    max_fee: 0,
+                    max_fee: 3,
                     min_finality_threshold: 0,
                     destination_caller: Pubkey::default(),
                 },

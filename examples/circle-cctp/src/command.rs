@@ -13,7 +13,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Bridge {
-        #[arg(long, default_value = "1")]
+        #[arg(long, default_value = "6")]
         amount: u64,
         #[arg(long, default_value = "6")]
         destination_chain: u32,
