@@ -1,4 +1,3 @@
-use super::MessageTransmitterV2Encoder;
 pub mod accept_ownership;
 pub mod disable_attester;
 pub mod enable_attester;

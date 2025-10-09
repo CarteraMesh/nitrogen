@@ -1,4 +1,3 @@
-use super::MessageTransmitterV2Encoder;
 pub mod message_sent;
 pub mod message_transmitter;
 pub mod used_nonce;
