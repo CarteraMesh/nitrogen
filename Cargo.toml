@@ -26,8 +26,6 @@ borsh = { version = "1.5.1" }
 borsh-derive-internal = "0.10.3"
 bs58 = { version = "0.5.1", default-features = false }
 
-carbon-core = { version = "0.10.0" }
-
 # misc
 chrono = { version = "0.4.40", features = ["serde"] }
 clap = { version = "4.5.30", features = ["derive"] }

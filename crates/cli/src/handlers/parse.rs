@@ -2,17 +2,13 @@ use {
     crate::{
         accounts::{AccountsModTemplate, AccountsStructTemplate, process_accounts},
         instructions::{InstructionsModTemplate, InstructionsStructTemplate, process_instructions},
-        project::{DataSourceData, DecoderData, MetricsData, ProjectTemplate},
         types::{TypeStructTemplate, process_types},
         util::{is_big_array, read_idl},
     },
     anyhow::{Result, bail},
     askama::Template,
     heck::{ToKebabCase, ToSnakeCase, ToUpperCamelCase},
-    std::{
-        collections::HashSet,
-        fs::{self},
-    },
+    std::fs::{self},
 };
 
 pub fn parse(path: String, output: String, crate_name: Option<String>) -> Result<()> {
@@ -232,150 +228,4 @@ workspace = true
     }
 
     Ok(())
-}
-
-pub fn scaffold(
-    name: String,
-    output: String,
-    decoders: String,
-    data_source: String,
-    metrics: String,
-) -> Result<()> {
-    let decoders_set = parse_decoders(decoders);
-
-    let project_dir = if output.ends_with("/") {
-        format!("{}-{}", output, name.to_kebab_case())
-    } else {
-        format!("{}/{}", output, name.to_kebab_case())
-    };
-
-    // Generate project directories
-    fs::create_dir_all(&project_dir).expect("Failed to create decoder directory");
-
-    let src_dir = format!("{}/src", project_dir);
-
-    fs::create_dir_all(&src_dir).expect("Failed to create src directory");
-
-    // Generate Cargo.toml
-    let (carbon_deps_version, sol_deps_version) = ("0.10.0", "=2.1.15");
-    let datasource_dep = format!(
-        "carbon-{}-datasource = \"{}\"",
-        data_source.to_kebab_case(),
-        carbon_deps_version
-    );
-    let metrics_dep = format!(
-        "carbon-{}-metrics = \"{}\"",
-        metrics.to_kebab_case(),
-        carbon_deps_version
-    );
-
-    let cargo_toml_filename = format!("{}/Cargo.toml", project_dir);
-    let cargo_toml_content = format!(
-        r#"[package]
-name = "{name}"
-version = "0.0.1"
-edition = "2021"
-
-[dependencies]
-async-trait = "0.1.86"
-carbon-core = "{carbon_deps_version}"
-{decoder_deps}
-{datasource_dep}
-{metrics_dep}
-solana-sdk = "{sol_deps_version}"
-solana-pubkey = "{sol_deps_version}"
-solana-client = "{sol_deps_version}"
-tokio = "1.43.0"
-dotenv = "0.15.0"
-env_logger = "0.11.5"
-log = "0.4.25"
-{grpc_deps}
-"#,
-        decoder_deps = decoders_set
-            .iter()
-            .map(|decoder| format!(
-                "carbon-{}-decoder = \"{}\"",
-                decoder.to_kebab_case(),
-                carbon_deps_version
-            ))
-            .collect::<Vec<_>>()
-            .join("\n"),
-        grpc_deps = if data_source == "yellowstone-grpc" {
-            r#"yellowstone-grpc-client = { version = "5.0.0" }
-yellowstone-grpc-proto = { version = "5.0.0" }
-            "#
-        } else {
-            ""
-        },
-    );
-    fs::write(&cargo_toml_filename, cargo_toml_content).expect("Failed to write Cargo.toml file");
-
-    // Generate .gitignore
-    let gitignore_filename = format!("{}/.gitignore", project_dir);
-    let gitignore_content = r"
-debug/
-target/
-
-.env
-.DS_Store
-";
-
-    fs::write(&gitignore_filename, gitignore_content).expect("Failed to write .gitignore file");
-
-    // Generate .env
-    let env_filename = format!("{}/.env", project_dir);
-
-    let env_content = match data_source.to_snake_case().as_str() {
-        "helius_atlas_ws" => "HELIUS_API_KEY=your-atlas-ws-url-here",
-        "rpc_block_subscribe" => "RPC_WS_URL=your-rpc-ws-url-here",
-        "rpc_transaction_crawler" => "RPC_URL=your-rpc-url-here",
-        "yellowstone_grpc" => {
-            r"
-GEYSER_URL=your-rpc-url-here
-X_TOKEN=your-x-token-here
-"
-        }
-        _ => "",
-    };
-
-    fs::write(&env_filename, env_content).expect("Failed to write .env file");
-
-    // Generate main.rs
-    let main_rs_filename = format!("{}/main.rs", src_dir);
-    let main_rs_template = ProjectTemplate {
-        data_source: &DataSourceData {
-            module_name: data_source.to_snake_case(),
-        },
-        metrics: &MetricsData {
-            name: metrics.to_upper_camel_case(),
-            module_name: metrics.to_snake_case(),
-        },
-        decoders: &decoders_set
-            .iter()
-            .map(|decoder| DecoderData {
-                name: decoder
-                    .split("-")
-                    .collect::<Vec<_>>()
-                    .first()
-                    .expect("Failed to get decoder name")
-                    .to_string(),
-                module_name: decoder.to_snake_case(),
-            })
-            .collect::<Vec<_>>(),
-    };
-    let main_rs_content = main_rs_template
-        .render()
-        .expect("Failed to render main.rs template");
-
-    fs::write(&main_rs_filename, main_rs_content).expect("Failed to write Cargo.toml file");
-
-    Ok(())
-}
-
-pub fn parse_decoders(decoders: String) -> HashSet<String> {
-    decoders
-        .split(',')
-        .map(|s| s.trim().to_string().to_upper_camel_case())
-        .filter(|s| !s.is_empty())
-        .collect()
 }

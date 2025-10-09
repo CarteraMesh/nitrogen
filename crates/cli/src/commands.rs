@@ -4,9 +4,9 @@ use {
 };
 
 #[derive(Parser)]
-#[command(name = "IDL Parser CLI")]
-#[command(about = "Generate Program Parsers for Carbon.")]
-#[command(version = "0.10.0", author = "aimbot-labs")]
+#[command(name = "IDL2Rust CLI")]
+#[command(about = "Generate real Rust code from IDLs for program execution. No macro magic")]
+#[command(version = "0.10.0", author = "carteraMesh")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -15,7 +15,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     #[command(name = "parse")]
-    #[command(about = "Generate code for Carbon around the submitted IDL.")]
+    #[command(about = "Generate real Rust code from IDLs.")]
     Parse(ParseOptions),
 }
 

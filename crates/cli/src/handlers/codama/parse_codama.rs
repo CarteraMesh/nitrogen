@@ -182,9 +182,6 @@ edition = {{ workspace = true }}
 crate-type = ["rlib"]
 
 [dependencies]
-carbon-core = {{ workspace = true }}
-carbon-proc-macros = {{ workspace = true }}
-carbon-macros = {{ workspace = true }}
 solana-account = {{ workspace = true }}
 solana-instruction = {{ workspace = true }}
 solana-pubkey = {{ workspace = true }}

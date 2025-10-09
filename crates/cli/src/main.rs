@@ -9,7 +9,6 @@ pub mod handlers;
 pub mod idl;
 pub mod instructions;
 mod legacy_idl;
-pub mod project;
 pub mod types;
 pub mod util;
 
