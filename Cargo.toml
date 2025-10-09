@@ -42,7 +42,7 @@ heck = "0.5.0"
 helius = { version = "0.3.1" }
 hex = "0.4.3"
 indicatif = "0.17.8"
-inquire = "0.7.5"
+inquire = "0.9.1"
 juniper = { version = "0.16.1", features = ["uuid"] }
 juniper_axum = { version = "0.2.0" }
 juniper_codegen = { version = "0.16.0" }
