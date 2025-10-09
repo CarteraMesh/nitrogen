@@ -87,7 +87,7 @@ solana-rpc-client-api = { version = "2" }
 solana-signature = { version = "2", features = ["rand"] }
 solana-signer = { version = "2" }
 solana-transaction = { version = "2", features = ["bincode"] }
-solana-transaction-context = "2"
+solana-transaction-context = "3"
 solana-transaction-status = "2"
 spl-associated-token-account = "7"
 
