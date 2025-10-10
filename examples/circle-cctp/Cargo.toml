@@ -8,34 +8,30 @@ repository.workspace = true
 [dependencies]
 alloy-primitives = { workspace = true }
 anyhow = { workspace = true }
-async-trait = { workspace = true }
 base64 = "0.22"
 bincode = { workspace = true }
 clap = { workspace = true }
 dotenv = { workspace = true }
-env_logger = { workspace = true }
-log = { workspace = true }
+log = { version = "0.4" }
 nitrogen-circle-message-transmitter-v2-encoder = { workspace = true }
 nitrogen-circle-token-messenger-minter-v2-encoder = { workspace = true }
 reqwest = { version = "0.12.11", features = ["json"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-solana-commitment-config = { workspace = true }
+solana-commitment-config = "2"
 solana-instruction = { workspace = true }
-solana-keypair = { workspace = true }
+solana-keypair = "2"
 solana-pubkey = { workspace = true }
-solana-rpc-client = { workspace = true }
-solana-rpc-client-api = { workspace = true }
-solana-signature = { workspace = true }
-solana-signer = { workspace = true }
-solana-transaction = { workspace = true }
-solana-transaction-status = { workspace = true }
-spl-associated-token-account = { workspace = true }
-spl-memo = { workspace = true }
-spl-token = { workspace = true }
+solana-rpc-client = "2"
+solana-rpc-client-api = "2"
+solana-signature = "2"
+solana-signer = "2"
+solana-transaction = "2"
+spl-associated-token-account = "7"
+spl-memo = "6"
+tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
 
 [lints]
 workspace = true

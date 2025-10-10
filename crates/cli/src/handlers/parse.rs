@@ -198,7 +198,6 @@ crate-type = ["rlib"]
 bon = {{ workspace = true }}
 borsh = {{ workspace = true }}
 serde = {{ workspace = true }}
-solana-account = {{ workspace = true }}
 solana-instruction = {{ workspace = true }}
 solana-pubkey = {{ workspace = true }}
 {big_array}

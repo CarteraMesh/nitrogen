@@ -9,18 +9,11 @@ repository = { workspace = true }
 keywords = ["solana", "cli"]
 categories = ["command-line-utilities"]
 
-[lints]
-workspace = true
-
 [[bin]]
 name = "nitrogen"
 path = "src/main.rs"
 
 [dependencies]
-solana-client = { workspace = true }
-solana-commitment-config = { workspace = true }
-solana-pubkey = { workspace = true }
-
 anyhow = { workspace = true }
 askama = { workspace = true }
 borsh = { workspace = true, features = ["derive"] }
@@ -28,7 +21,12 @@ clap = { workspace = true, features = ["derive"] }
 flate2 = { workspace = true }
 heck = { workspace = true }
 hex = { workspace = true }
-inquire = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+solana-client = { workspace = true }
+solana-commitment-config = { workspace = true }
+solana-pubkey = { workspace = true }
+
+[lints]
+workspace = true

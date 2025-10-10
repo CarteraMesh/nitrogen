@@ -70,7 +70,7 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           components: clippy
       - name: ${{ matrix.toolchain }} cargo clippy (${{ matrix.features }})
-        uses: giraffate/clippy-action@stable
+        uses: giraffate/clippy-action@v1
         with:
           reporter: "github-pr-check"
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -126,35 +126,46 @@ jobs:
         uses: dtolnay/install@cargo-docs-rs
       - name: cargo docs-rs
         run: cargo docs-rs
-  hack:
-    # cargo-hack checks combinations of feature flags to ensure that features are all additive
-    # which is required for feature unification
-    runs-on: ${{ vars.RUNNER }}
-    name: ubuntu / stable / features
-    if: false
+
+  cargo_sort:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          submodules: true
+      - name: Checkout
+        uses: actions/checkout@v5
       - uses: ubicloud/rust-cache@v2
         with:
           cache-on-failure: "true"
           cache-all-crates: "true"
           cache-workspace-crates: "true"
-          workspaces: |
-            . -> target
-          # Specifies what to use as the backend providing cache
-          # Can be set to "github", "buildjet", or "warpbuild"
-          # default: "github"
           cache-bin: "true"
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
-      - name: cargo install cargo-hack
-        uses: taiki-e/install-action@cargo-hack
-      # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
-      # --feature-powerset runs for every combination of features
-      - name: cargo hack
-        run: cargo hack --feature-powerset check
+      - name: Stable Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Install cargo-sort
+        run: cargo install --locked cargo-sort
+      - name: Check `Cargo.toml` sort
+        run: cargo sort -c -g -w
+
+  machete:
+    runs-on: ${{ vars.RUNNER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - uses: ubicloud/rust-cache@v2
+        with:
+          cache-on-failure: "true"
+          cache-all-crates: "true"
+          cache-workspace-crates: "true"
+          cache-bin: "true"
+      - name: Stable Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Install `cargo-machete`
+        run: cargo install cargo-machete
+      - name: Check unused Cargo dependencies
+        run: cargo machete
 
   udeps:
     runs-on: ${{ vars.RUNNER }}
