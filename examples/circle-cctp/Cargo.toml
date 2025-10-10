@@ -18,7 +18,7 @@ nitrogen-circle-token-messenger-minter-v2-encoder = { workspace = true }
 reqwest = { version = "0.12.11", features = ["json"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-solana-commitment-config = "2"
+solana-commitment-config = "3"
 solana-instruction = { workspace = true }
 solana-keypair = "2"
 solana-pubkey = { workspace = true }

@@ -42,7 +42,7 @@ sha2 = "0.10"
 
 # solana
 solana-client = "2"
-solana-commitment-config = "2"
+solana-commitment-config = "3"
 solana-instruction = { version = "2", default-features = false, features = ["borsh"] }
 solana-pubkey = { version = "2", features = ["serde", "borsh", "curve25519"] }
 
