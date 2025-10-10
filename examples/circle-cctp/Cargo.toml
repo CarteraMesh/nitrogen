@@ -23,7 +23,7 @@ solana-instruction = { workspace = true }
 solana-keypair = "2"
 solana-pubkey = { workspace = true }
 solana-rpc-client = "2"
-solana-rpc-client-api = "2"
+solana-rpc-client-api = "3"
 solana-signature = "2"
 solana-signer = "2"
 solana-transaction = "2"
