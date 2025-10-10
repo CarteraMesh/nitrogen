@@ -104,7 +104,7 @@ jobs:
     # API be documented as only available in some specific platforms.
     #
     runs-on: ubuntu-latest
-    name: nightly / doc
+    name: doc
     steps:
       - uses: actions/checkout@v5
         with:
@@ -120,8 +120,8 @@ jobs:
           # Can be set to "github", "buildjet", or "warpbuild"
           # default: "github"
           cache-bin: "true"
-      - name: Install nightly
-        uses: dtolnay/rust-toolchain@nightly
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-docs-rs
         uses: dtolnay/install@cargo-docs-rs
       - name: cargo docs-rs

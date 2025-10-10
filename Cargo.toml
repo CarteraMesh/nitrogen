@@ -14,7 +14,6 @@ vec_init_then_push = "allow"
 too_many_arguments = "allow"
 
 [workspace.dependencies]
-# other
 alloy-primitives  = "1"
 anyhow = "1"
 askama = "0.12"
@@ -24,30 +23,23 @@ bon = "3"
 borsh = { version = "1" }
 borsh-derive-internal = "0.10"
 bs58 = { version = "0.5", default-features = false }
-
-# misc
 clap = { version = "4", features = ["derive"] }
 dotenv = "0.15.0"
 flate2 = "1"
 heck = "0.5"
 hex = "0.4"
 log = "0.45"
-
 nitrogen-circle-message-transmitter-v2-encoder  = { path = "./encoders/circle-message-transmitter-v2-encoder", version = "0.1.0" }
 nitrogen-circle-token-messenger-minter-v2-encoder = { path = "./encoders/circle-token-messenger-minter-v2-encoder", version = "0.1.0" }
-
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
-
-# solana
 solana-client = "2"
 solana-commitment-config = "2"
 solana-instruction = { version = "2", default-features = false, features = ["borsh"] }
 solana-pubkey = { version = "2", features = ["serde", "borsh", "curve25519"] }
-
 syn = { version = "1", features = ["full"] }
 thiserror = { version = "2", default-features = false }
+tokio = { version = "1", features = ["rt", "time", "signal", "macros"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
-tokio = { version = "1", features = ["rt", "time", "signal", "macros"] }
