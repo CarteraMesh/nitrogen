@@ -26,7 +26,7 @@ solana-rpc-client = "2"
 solana-rpc-client-api = "2"
 solana-signature = "2"
 solana-signer = "2"
-solana-transaction = "2"
+solana-transaction = "3"
 spl-associated-token-account = "7"
 spl-memo = "6"
 tokio = { workspace = true, features = ["full"] }
