@@ -190,9 +190,12 @@ pub(crate) fn derive_pda(seeds: &[&[u8]], program_id: &Pubkey, read_only: bool) 
 name = "{crate_package_name}"
 version = "0.1.0"
 edition = {{ workspace = true }}
-
-[lib]
-crate-type = ["rlib"]
+description = "{crate_package_name}"
+license = {{ workspace = true }
+readme = "README.md"
+repository = {{ workspace = true }}
+keywords = ["solana", "idl"]
+categories = ["encoding"]
 
 [dependencies]
 bon = {{ workspace = true }}

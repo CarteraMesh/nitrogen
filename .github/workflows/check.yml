@@ -125,7 +125,11 @@ jobs:
       - name: Install cargo-docs-rs
         uses: dtolnay/install@cargo-docs-rs
       - name: cargo docs-rs
-        run: cargo docs-rs
+        run: | 
+          LIBS=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.targets[] | .kind[] == "lib") | .name' | tr '\n' ' ')
+          for lib in $LIBS; do
+            cargo docs-rs -p $lib
+          done
 
   cargo_sort:
     runs-on: ubuntu-latest
@@ -145,7 +149,7 @@ jobs:
       - name: Install cargo-sort
         run: cargo install --locked cargo-sort
       - name: Check `Cargo.toml` sort
-        run: cargo sort -c -g -w
+        run: cargo sort -c -g  && cd crates/cli && cargo sort -c -g
 
   machete:
     runs-on: ${{ vars.RUNNER }}
