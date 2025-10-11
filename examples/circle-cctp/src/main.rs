@@ -10,7 +10,7 @@ use {
     },
     nitrogen_circle_token_messenger_minter_v2_encoder::{
         ID as PROGRAM_ID,
-        instructions::deposit_for_burn::DepositForBurn,
+        instructions::deposit_for_burn,
         types::DepositForBurnParams,
     },
     solana_commitment_config::CommitmentConfig,
@@ -134,16 +134,14 @@ pub async fn main() -> Result<()> {
             // mintRecipient is a bytes32 type so pad with 0's then convert to a
             // solana PublicKey
             let mint_recipient = Pubkey::new_from_array(evm_addr.into_word().into());
-            let deposit_for_burn = DepositForBurn {
-                params: DepositForBurnParams {
-                    amount,
-                    destination_domain: destination_chain,
-                    mint_recipient,
-                    max_fee: 3,
-                    min_finality_threshold: 0,
-                    destination_caller: Pubkey::default(),
-                },
-            };
+            let deposit_for_burn = deposit_for_burn(DepositForBurnParams::builder()
+                .amount(amount)
+                .destination_caller(Pubkey::default())
+                .mint_recipient(mint_recipient)
+                .max_fee(3)
+                .min_finality_threshold(0)
+                .destination_domain(destination_chain)
+                .build());
 
             eprintln!("amount: {}", deposit_for_burn.params.amount);
             eprintln!(

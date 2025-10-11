@@ -1,5 +1,3 @@
-use super::{{ decoder_name }};
-
 {%- for instruction in instructions %}
 pub mod {{ instruction.module_name }};
 {%- endfor %}
@@ -10,3 +8,16 @@ pub enum {{ program_instruction_enum }} {
     {{ instruction.struct_name }}({{ instruction.module_name }}::{{ instruction.struct_name }}),
     {%- endfor %}
 }
+
+{%- for instruction in instructions %}
+{%- if instruction.args.len() > 0 %}
+
+pub fn {{ instruction.module_name }}(params: crate::types::{{ instruction.args[0].rust_type }}) -> {{ instruction.module_name }}::{{ instruction.struct_name }} {
+    {{ instruction.module_name }}::{{ instruction.struct_name }} {params }
+}
+{%- else %}
+pub fn {{ instruction.module_name }}() -> {{ instruction.module_name }}::{{ instruction.struct_name }} {
+    {{ instruction.module_name }}::{{ instruction.struct_name }} { }
+}
+{%- endif %}
+{%- endfor %}
