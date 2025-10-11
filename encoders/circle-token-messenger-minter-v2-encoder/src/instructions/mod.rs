@@ -34,7 +34,9 @@ pub enum TokenMessengerMinterV2Instruction {
     DepositForBurn(deposit_for_burn::DepositForBurn),
     DepositForBurnWithHook(deposit_for_burn_with_hook::DepositForBurnWithHook),
     HandleReceiveFinalizedMessage(handle_receive_finalized_message::HandleReceiveFinalizedMessage),
-    HandleReceiveUnfinalizedMessage(handle_receive_unfinalized_message::HandleReceiveUnfinalizedMessage),
+    HandleReceiveUnfinalizedMessage(
+        handle_receive_unfinalized_message::HandleReceiveUnfinalizedMessage,
+    ),
     Initialize(initialize::Initialize),
     LinkTokenPair(link_token_pair::LinkTokenPair),
     Pause(pause::Pause),
@@ -53,102 +55,140 @@ pub enum TokenMessengerMinterV2Instruction {
     UpdatePauser(update_pauser::UpdatePauser),
 }
 
-pub fn accept_ownership(params: crate::types::AcceptOwnershipParams) -> accept_ownership::AcceptOwnership {
-    accept_ownership::AcceptOwnership {params }
+pub fn accept_ownership(
+    params: crate::types::AcceptOwnershipParams,
+) -> accept_ownership::AcceptOwnership {
+    accept_ownership::AcceptOwnership { params }
 }
 
-pub fn add_local_token(params: crate::types::AddLocalTokenParams) -> add_local_token::AddLocalToken {
-    add_local_token::AddLocalToken {params }
+pub fn add_local_token(
+    params: crate::types::AddLocalTokenParams,
+) -> add_local_token::AddLocalToken {
+    add_local_token::AddLocalToken { params }
 }
 
-pub fn add_remote_token_messenger(params: crate::types::AddRemoteTokenMessengerParams) -> add_remote_token_messenger::AddRemoteTokenMessenger {
-    add_remote_token_messenger::AddRemoteTokenMessenger {params }
+pub fn add_remote_token_messenger(
+    params: crate::types::AddRemoteTokenMessengerParams,
+) -> add_remote_token_messenger::AddRemoteTokenMessenger {
+    add_remote_token_messenger::AddRemoteTokenMessenger { params }
 }
 
-pub fn burn_token_custody(params: crate::types::BurnTokenCustodyParams) -> burn_token_custody::BurnTokenCustody {
-    burn_token_custody::BurnTokenCustody {params }
+pub fn burn_token_custody(
+    params: crate::types::BurnTokenCustodyParams,
+) -> burn_token_custody::BurnTokenCustody {
+    burn_token_custody::BurnTokenCustody { params }
 }
 
 pub fn denylist_account(params: crate::types::DenylistParams) -> denylist_account::DenylistAccount {
-    denylist_account::DenylistAccount {params }
+    denylist_account::DenylistAccount { params }
 }
 
-pub fn deposit_for_burn(params: crate::types::DepositForBurnParams) -> deposit_for_burn::DepositForBurn {
-    deposit_for_burn::DepositForBurn {params }
+pub fn deposit_for_burn(
+    params: crate::types::DepositForBurnParams,
+) -> deposit_for_burn::DepositForBurn {
+    deposit_for_burn::DepositForBurn { params }
 }
 
-pub fn deposit_for_burn_with_hook(params: crate::types::DepositForBurnWithHookParams) -> deposit_for_burn_with_hook::DepositForBurnWithHook {
-    deposit_for_burn_with_hook::DepositForBurnWithHook {params }
+pub fn deposit_for_burn_with_hook(
+    params: crate::types::DepositForBurnWithHookParams,
+) -> deposit_for_burn_with_hook::DepositForBurnWithHook {
+    deposit_for_burn_with_hook::DepositForBurnWithHook { params }
 }
 
-pub fn handle_receive_finalized_message(params: crate::types::HandleReceiveMessageParams) -> handle_receive_finalized_message::HandleReceiveFinalizedMessage {
-    handle_receive_finalized_message::HandleReceiveFinalizedMessage {params }
+pub fn handle_receive_finalized_message(
+    params: crate::types::HandleReceiveMessageParams,
+) -> handle_receive_finalized_message::HandleReceiveFinalizedMessage {
+    handle_receive_finalized_message::HandleReceiveFinalizedMessage { params }
 }
 
-pub fn handle_receive_unfinalized_message(params: crate::types::HandleReceiveMessageParams) -> handle_receive_unfinalized_message::HandleReceiveUnfinalizedMessage {
-    handle_receive_unfinalized_message::HandleReceiveUnfinalizedMessage {params }
+pub fn handle_receive_unfinalized_message(
+    params: crate::types::HandleReceiveMessageParams,
+) -> handle_receive_unfinalized_message::HandleReceiveUnfinalizedMessage {
+    handle_receive_unfinalized_message::HandleReceiveUnfinalizedMessage { params }
 }
 
 pub fn initialize(params: crate::types::InitializeParams) -> initialize::Initialize {
-    initialize::Initialize {params }
+    initialize::Initialize { params }
 }
 
-pub fn link_token_pair(params: crate::types::LinkTokenPairParams) -> link_token_pair::LinkTokenPair {
-    link_token_pair::LinkTokenPair {params }
+pub fn link_token_pair(
+    params: crate::types::LinkTokenPairParams,
+) -> link_token_pair::LinkTokenPair {
+    link_token_pair::LinkTokenPair { params }
 }
 
 pub fn pause(params: crate::types::PauseParams) -> pause::Pause {
-    pause::Pause {params }
+    pause::Pause { params }
 }
 
-pub fn remove_local_token(params: crate::types::RemoveLocalTokenParams) -> remove_local_token::RemoveLocalToken {
-    remove_local_token::RemoveLocalToken {params }
+pub fn remove_local_token(
+    params: crate::types::RemoveLocalTokenParams,
+) -> remove_local_token::RemoveLocalToken {
+    remove_local_token::RemoveLocalToken { params }
 }
 
-pub fn remove_remote_token_messenger(params: crate::types::RemoveRemoteTokenMessengerParams) -> remove_remote_token_messenger::RemoveRemoteTokenMessenger {
-    remove_remote_token_messenger::RemoveRemoteTokenMessenger {params }
+pub fn remove_remote_token_messenger(
+    params: crate::types::RemoveRemoteTokenMessengerParams,
+) -> remove_remote_token_messenger::RemoveRemoteTokenMessenger {
+    remove_remote_token_messenger::RemoveRemoteTokenMessenger { params }
 }
 
-pub fn set_fee_recipient(params: crate::types::SetFeeRecipientParams) -> set_fee_recipient::SetFeeRecipient {
-    set_fee_recipient::SetFeeRecipient {params }
+pub fn set_fee_recipient(
+    params: crate::types::SetFeeRecipientParams,
+) -> set_fee_recipient::SetFeeRecipient {
+    set_fee_recipient::SetFeeRecipient { params }
 }
 
-pub fn set_max_burn_amount_per_message(params: crate::types::SetMaxBurnAmountPerMessageParams) -> set_max_burn_amount_per_message::SetMaxBurnAmountPerMessage {
-    set_max_burn_amount_per_message::SetMaxBurnAmountPerMessage {params }
+pub fn set_max_burn_amount_per_message(
+    params: crate::types::SetMaxBurnAmountPerMessageParams,
+) -> set_max_burn_amount_per_message::SetMaxBurnAmountPerMessage {
+    set_max_burn_amount_per_message::SetMaxBurnAmountPerMessage { params }
 }
 
 pub fn set_min_fee(params: crate::types::SetMinFeeParams) -> set_min_fee::SetMinFee {
-    set_min_fee::SetMinFee {params }
+    set_min_fee::SetMinFee { params }
 }
 
-pub fn set_min_fee_controller(params: crate::types::SetMinFeeControllerParams) -> set_min_fee_controller::SetMinFeeController {
-    set_min_fee_controller::SetMinFeeController {params }
+pub fn set_min_fee_controller(
+    params: crate::types::SetMinFeeControllerParams,
+) -> set_min_fee_controller::SetMinFeeController {
+    set_min_fee_controller::SetMinFeeController { params }
 }
 
-pub fn set_token_controller(params: crate::types::SetTokenControllerParams) -> set_token_controller::SetTokenController {
-    set_token_controller::SetTokenController {params }
+pub fn set_token_controller(
+    params: crate::types::SetTokenControllerParams,
+) -> set_token_controller::SetTokenController {
+    set_token_controller::SetTokenController { params }
 }
 
-pub fn transfer_ownership(params: crate::types::TransferOwnershipParams) -> transfer_ownership::TransferOwnership {
-    transfer_ownership::TransferOwnership {params }
+pub fn transfer_ownership(
+    params: crate::types::TransferOwnershipParams,
+) -> transfer_ownership::TransferOwnership {
+    transfer_ownership::TransferOwnership { params }
 }
 
-pub fn undenylist_account(params: crate::types::UndenylistParams) -> undenylist_account::UndenylistAccount {
-    undenylist_account::UndenylistAccount {params }
+pub fn undenylist_account(
+    params: crate::types::UndenylistParams,
+) -> undenylist_account::UndenylistAccount {
+    undenylist_account::UndenylistAccount { params }
 }
 
-pub fn unlink_token_pair(params: crate::types::UninkTokenPairParams) -> unlink_token_pair::UnlinkTokenPair {
-    unlink_token_pair::UnlinkTokenPair {params }
+pub fn unlink_token_pair(
+    params: crate::types::UninkTokenPairParams,
+) -> unlink_token_pair::UnlinkTokenPair {
+    unlink_token_pair::UnlinkTokenPair { params }
 }
 
 pub fn unpause(params: crate::types::UnpauseParams) -> unpause::Unpause {
-    unpause::Unpause {params }
+    unpause::Unpause { params }
 }
 
-pub fn update_denylister(params: crate::types::UpdateDenylisterParams) -> update_denylister::UpdateDenylister {
-    update_denylister::UpdateDenylister {params }
+pub fn update_denylister(
+    params: crate::types::UpdateDenylisterParams,
+) -> update_denylister::UpdateDenylister {
+    update_denylister::UpdateDenylister { params }
 }
 
 pub fn update_pauser(params: crate::types::UpdatePauserParams) -> update_pauser::UpdatePauser {
-    update_pauser::UpdatePauser {params }
+    update_pauser::UpdatePauser { params }
 }
