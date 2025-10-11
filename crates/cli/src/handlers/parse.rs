@@ -191,7 +191,7 @@ name = "{crate_package_name}"
 version = "0.1.0"
 edition = {{ workspace = true }}
 description = "{crate_package_name}"
-license = {{ workspace = true }
+license = {{ workspace = true }}
 readme = "README.md"
 repository = {{ workspace = true }}
 keywords = ["solana", "idl"]
