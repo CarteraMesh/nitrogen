@@ -7,9 +7,9 @@ use super::*;
 {%- when TypeKind::Struct %}
 
 {%- if type_data.fields.len() == 0 %}
-#[derive(Debug, borsh::BorshSerialize ,serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, borsh::BorshSerialize, borsh::BorshDeserialize, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
 {%- else %}
-#[derive(Debug, borsh::BorshSerialize ,bon::Builder, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, borsh::BorshSerialize, borsh::BorshDeserialize, bon::Builder, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
 {%- endif %}
 pub struct {{ type_data.name }} {
     {%- for field in type_data.fields %}

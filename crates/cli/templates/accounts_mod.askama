@@ -2,6 +2,7 @@ use super::{{ decoder_name }};
 
 {%- for account in accounts %}
 pub mod {{ account.module_name -}};
+pub use {{ account.module_name -}}::*;
 {%- endfor %}
 
 pub enum {{ program_struct_name }} {
