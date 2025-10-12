@@ -1,3 +1,14 @@
+#[derive(
+    Debug,
+    borsh::BorshSerialize,
+    bon::Builder,
+    serde::Serialize,
+    serde::Deserialize,
+    PartialEq,
+    Eq,
+    Clone,
+    Hash,
+)]
 pub struct TokenMinter {
     pub token_controller: solana_pubkey::Pubkey,
     pub pauser: solana_pubkey::Pubkey,

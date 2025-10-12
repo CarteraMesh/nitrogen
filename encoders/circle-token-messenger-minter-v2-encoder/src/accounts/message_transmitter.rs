@@ -1,3 +1,14 @@
+#[derive(
+    Debug,
+    borsh::BorshSerialize,
+    bon::Builder,
+    serde::Serialize,
+    serde::Deserialize,
+    PartialEq,
+    Eq,
+    Clone,
+    Hash,
+)]
 pub struct MessageTransmitter {
     pub owner: solana_pubkey::Pubkey,
     pub pending_owner: solana_pubkey::Pubkey,

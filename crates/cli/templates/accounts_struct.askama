@@ -2,6 +2,17 @@
 use super::super::types::*;
 {%- endif %}
 
+#[derive(
+    Debug,
+    borsh::BorshSerialize,
+    bon::Builder,
+    serde::Serialize,
+    serde::Deserialize,
+    PartialEq,
+    Eq,
+    Clone,
+    Hash,
+)]
 pub struct {{ account.struct_name }} {
     {%- for field in account.fields %}
         {%- if let Some(attributes) = field.attributes %}

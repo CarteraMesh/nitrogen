@@ -1,3 +1,14 @@
+#[derive(
+    Debug,
+    borsh::BorshSerialize,
+    bon::Builder,
+    serde::Serialize,
+    serde::Deserialize,
+    PartialEq,
+    Eq,
+    Clone,
+    Hash,
+)]
 pub struct TokenMessenger {
     pub denylister: solana_pubkey::Pubkey,
     pub owner: solana_pubkey::Pubkey,

@@ -1,3 +1,14 @@
+#[derive(
+    Debug,
+    borsh::BorshSerialize,
+    bon::Builder,
+    serde::Serialize,
+    serde::Deserialize,
+    PartialEq,
+    Eq,
+    Clone,
+    Hash,
+)]
 pub struct TokenPair {
     pub remote_domain: u32,
     pub remote_token: solana_pubkey::Pubkey,
