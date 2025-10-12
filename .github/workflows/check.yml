@@ -121,11 +121,11 @@ jobs:
           # default: "github"
           cache-bin: "true"
       - name: Install rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo-docs-rs
         uses: dtolnay/install@cargo-docs-rs
       - name: cargo docs-rs
-        run: | 
+        run: |
           LIBS=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.targets[] | .kind[] == "lib") | .name' | tr '\n' ' ')
           for lib in $LIBS; do
             cargo docs-rs -p $lib
