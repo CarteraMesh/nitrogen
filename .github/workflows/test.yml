@@ -81,13 +81,7 @@ jobs:
         run: cargo build --locked --all-features --all-targets
   coverage:
     runs-on: ${{ vars.RUNNER }}
-    name: ubuntu / stable / coverage / ${{ matrix.features }}
-    if: false
-    strategy:
-      fail-fast: false
-      matrix:
-        features:
-          - "default"
+    name: ubuntu / stable / coverage
     steps:
       - uses: actions/checkout@v5
       - uses: ubicloud/rust-cache@v2
@@ -97,9 +91,6 @@ jobs:
           cache-workspace-crates: "true"
           workspaces: |
             . -> target
-          # Specifies what to use as the backend providing cache
-          # Can be set to "github", "buildjet", or "warpbuild"
-          # default: "github"
           cache-bin: "true"
       - name: Install stable
         uses: dtolnay/rust-toolchain@stable
@@ -110,13 +101,12 @@ jobs:
       - name: cargo generate-lockfile
         if: hashFiles('Cargo.lock') == ''
         run: cargo generate-lockfile
-      - name: cargo llvm-cov (${{ matrix.features }})
+      - name: nitrogen-instruction-builder (async)
         run: |
-          if [ "${{ matrix.features }}" == "default" ]; then
-            cargo llvm-cov --locked --lcov --output-path lcov-${{ matrix.features }}.info
-          else
-            cargo llvm-cov --locked --features "${{ matrix.features }}" --lcov --output-path lcov-${{ matrix.features }}.info
-          fi
+          cargo llvm-cov --package nitrogen-instruction-builder --lcov --output-path lcov-instruction-builder-async.info
+      - name: nitrogen-instruction-builder (blocking)
+        run: |
+          cargo llvm-cov --package nitrogen-instruction-builder --features blocking --lcov --output-path lcov-instruction-builder-blocking.info
       - name: Record Rust version
         run: echo "RUST=$(rustc --version)" >> "$GITHUB_ENV"
       - name: Upload to codecov.io
@@ -124,6 +114,6 @@ jobs:
         with:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: lcov-${{ matrix.features }}.info
-          flags: ${{ matrix.features }}
+          files: lcov-instruction-builder-async.info,lcov-instruction-builder-blocking.info
+          flags: nitrogen-instruction-builder
           env_vars: OS,RUST
