@@ -18,7 +18,7 @@ alloy-primitives  = "1"
 anyhow = "1"
 askama = "0.12"
 base64 = "0.22"
-bincode = "1"
+bincode = "2"
 bon = "3"
 borsh = { version = "1" }
 borsh-derive-internal = "0.10"
