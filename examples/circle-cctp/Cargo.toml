@@ -21,7 +21,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 solana-commitment-config = "2"
 solana-instruction = { workspace = true }
-solana-keypair = "2"
+solana-keypair = "3"
 solana-pubkey = { workspace = true }
 solana-rpc-client = "2"
 solana-rpc-client-api = "2"
