@@ -84,16 +84,26 @@ async fn reclaim(
     Ok(())
 }
 
+fn get_keypair() -> Result<Keypair> {
+    let kp_file = env::var("KEYPAIR_FILE").ok();
+    let owner = if let Some(kp) = kp_file {
+        solana_keypair::read_keypair_file(&kp)
+            .map_err(|e| anyhow::format_err!("failed to read file {e}"))?
+    } else {
+        let kp = env::var("TEST_PRIVATE_KEY")
+            .map_err(|_| anyhow::format_err!("TEST_PRIVATE_KEY environment variable not set"))?;
+        Keypair::from_base58_string(&kp)
+    };
+    Ok(owner)
+}
+
 #[allow(clippy::expect_fun_call)]
 #[tokio::main]
 pub async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     tracing_subscriber::fmt::init();
-
     let cli = command::Cli::parse();
-    let kp_file = env::var("KEYPAIR_FILE").expect("KEYPAIR_FILE environment variable not set");
-    let owner = solana_keypair::read_keypair_file(&kp_file)
-        .expect(&format!("unable to load keypair file {kp_file}"));
+    let owner = get_keypair()?;
     let message_sent_event_account = Keypair::new();
 
     log::info!("using solana address {}", owner.pubkey());
@@ -172,7 +182,12 @@ pub async fn main() -> Result<()> {
                 "github.com/carteraMesh/nitrogen".as_bytes(),
                 &[&owner.pubkey()],
             ));
-            let sig = tx.send(&rpc, Some(&owner.pubkey()), &[&owner]).await?;
+            let sig = tx
+                .send(&rpc, Some(&owner.pubkey()), &[
+                    &owner,
+                    &message_sent_event_account,
+                ])
+                .await?;
             log::info!("{sig}");
             Ok(())
         }
