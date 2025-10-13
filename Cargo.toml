@@ -41,7 +41,7 @@ solana-instruction = { version = "2", default-features = false, features = ["bor
 solana-pubkey = { version = "2", features = ["serde", "borsh", "curve25519"] }
 solana-rpc-client = { version = "2" }
 solana-rpc-client-api = { version = "2" }
-solana-signer = { version = "2" }
+solana-signer = { version = "3" }
 solana-signature = { version = "2" }
 solana-transaction = { version = "2" }
 syn = { version = "1", features = ["full"] }
