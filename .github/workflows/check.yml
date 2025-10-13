@@ -104,7 +104,7 @@ jobs:
     # API be documented as only available in some specific platforms.
     #
 
-    runs-on: ${{ vars.RUNNER }}
+    runs-on: ubuntu-latest
     name: doc
     steps:
       - uses: actions/checkout@v5
@@ -192,5 +192,8 @@ jobs:
         with:
           toolchain: stable
       - name: Examples
+        env:
+          RUST_LOG: debug
+          TEST_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
         run: |
           cargo run -p circle-cctp -- bridge  0x626189bcDE2392ea088Ea0BD32336994CA9a0DCc
