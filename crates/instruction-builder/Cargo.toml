@@ -19,6 +19,8 @@ bincode = { workspace = true }
 bon = { workspace = true }
 borsh = { workspace = true }
 serde = { workspace = true }
+spl-associated-token-account = { workspace = true }
+spl-token = { workspace = true }
 solana-commitment-config = { workspace = true }
 solana-instruction = { workspace = true }
 solana-pubkey = { workspace = true }

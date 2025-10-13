@@ -10,4 +10,7 @@ pub enum Error {
 
     #[error("Failed RPC call: {0}")]
     SolanRpcError(String),
+
+    #[error(transparent)]
+    BorshError(#[from] std::io::Error),
 }

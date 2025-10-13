@@ -38,16 +38,16 @@ enum AttestationStatus {
 
 pub async fn get_attestation_with_retry(
     message_hash: String,
-    max_attempts: Option<u32>,
-    poll_interval: Option<u64>,
+    chain: Option<u32>,
 ) -> Result<(AttestationBytes, AttestationBytes)> {
     let client = reqwest::Client::new();
-    let max_attempts = max_attempts.unwrap_or(30);
-    let poll_interval = poll_interval.unwrap_or(10);
+    let chain = chain.unwrap_or(5);
+    let max_attempts = 30;
+    let poll_interval = 10;
 
     info!(message_hash = ?message_hash, "Polling for attestation ...");
 
-    let url = format!("{IRIS_API_URL}/v2/messages/5?transactionHash={message_hash}");
+    let url = format!("{IRIS_API_URL}/v2/messages/{chain}/?transactionHash={message_hash}",);
 
     info!(url = ?url, "Attestation URL");
 

@@ -30,6 +30,7 @@ solana-signer = { workspace = true }
 solana-transaction = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-memo = { workspace = true }
+spl-token = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

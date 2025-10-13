@@ -23,4 +23,8 @@ pub enum Commands {
         message_sent_event_account: Pubkey,
         tx_hash: String,
     },
+
+    Recv {
+        tx_hash: String,
+    },
 }

@@ -173,6 +173,7 @@ pub struct {encoder_name};
 pub mod accounts;
 pub mod instructions;
 pub mod types;
+pub mod helpers;
 
 declare_id!("{program_id}");
 
