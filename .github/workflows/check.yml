@@ -195,5 +195,6 @@ jobs:
         env:
           RUST_LOG: debug
           TEST_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
+          RPC_URL: ${{ secrets.RPC_URL }}
         run: |
           cargo run -p circle-cctp -- bridge  0x626189bcDE2392ea088Ea0BD32336994CA9a0DCc
