@@ -1,11 +1,10 @@
 use {
     alloy_primitives::Address,
     anyhow::Result,
-    base64::prelude::*,
     clap::Parser,
     nitrogen_circle_message_transmitter_v2_encoder::{
         ID as MESSENGER_PROGRAM_ID,
-        instructions::reclaim_event_account::ReclaimEventAccount,
+        instructions::reclaim_event_account,
         types::ReclaimEventAccountParams,
     },
     nitrogen_circle_token_messenger_minter_v2_encoder::{
@@ -13,14 +12,13 @@ use {
         instructions::deposit_for_burn,
         types::DepositForBurnParams,
     },
+    nitrogen_instruction_builder::IntoInstruction,
     solana_commitment_config::CommitmentConfig,
     solana_instruction::Instruction,
     solana_keypair::Keypair,
     solana_pubkey::{Pubkey, pubkey},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
-    solana_rpc_client_api::config::RpcSimulateTransactionConfig,
     solana_signer::Signer,
-    solana_transaction::Transaction,
     std::env,
 };
 mod attestation;
@@ -45,27 +43,6 @@ async fn fetch_attestation(
     attestation::get_attestation_with_retry(sig, None, None).await
 }
 
-async fn broadcast(rpc: &RpcClient, tx: Transaction) -> Result<solana_signature::Signature> {
-    let transaction_base64 = BASE64_STANDARD.encode(bincode::serialize(&tx)?);
-    eprintln!("{transaction_base64}");
-    let result = rpc
-        .simulate_transaction_with_config(&tx, RpcSimulateTransactionConfig {
-            sig_verify: true,
-            ..RpcSimulateTransactionConfig::default()
-        })
-        .await?;
-
-    if let Some(e) = result.value.err {
-        if let Some(logs) = result.value.logs {
-            log::error!("Transaction failed with logs: {}", logs.join("\n"));
-        }
-        return Err(e.into());
-    }
-    let sig = rpc.send_and_confirm_transaction(&tx).await?;
-    log::info!("tx {sig}");
-    Ok(sig)
-}
-
 async fn reclaim(
     rpc: &RpcClient,
     tx_hash: String,
@@ -79,30 +56,31 @@ async fn reclaim(
         alloy_primitives::hex::encode(&message),
     );
 
-    let reclaim_account = ReclaimEventAccount {
-        params: ReclaimEventAccountParams {
-            attestation: attest,
-            destination_message: message,
-        },
-    };
-    let reclaim_tx = reclaim_account.build(
-        owner.pubkey(),
-        derive_pda(&[b"message_transmitter"], &MESSENGER_PROGRAM_ID),
-        message_sent_event_account,
+    let reclaim_account = reclaim_event_account(
+        ReclaimEventAccountParams::builder()
+            .attestation(attest)
+            .destination_message(message)
+            .build(),
     );
-    let hash = rpc.get_latest_blockhash().await?;
-    let tx = Transaction::new_signed_with_payer(
-        &[
-            reclaim_tx,
+
+    let reclaim_tx = reclaim_account
+        .accounts(
+            owner.pubkey(),
+            derive_pda(&[b"message_transmitter"], &MESSENGER_PROGRAM_ID),
+            message_sent_event_account,
+        )
+        .tx()
+        .push(
             spl_memo::build_memo("github.com/carteraMesh/nitrogen".as_bytes(), &[
                 &owner.pubkey()
-            ]),
-        ],
-        Some(&owner.pubkey()),
-        &[&owner],
-        hash,
-    );
-    let _ = broadcast(rpc, tx).await?;
+            ])
+            .into_instruction(),
+        );
+
+    let sig = reclaim_tx
+        .send(rpc, Some(&owner.pubkey()), &[&owner])
+        .await?;
+    log::info!("{sig}");
     Ok(())
 }
 
@@ -169,7 +147,7 @@ pub async fn main() -> Result<()> {
                 &SOLANA_USDC_ADDRESS,
             );
             log::info!("token account {owner_token_account}");
-            let burn_inx = deposit_for_burn.build(
+            let burn_inx = deposit_for_burn.accounts(
                 owner.pubkey(),
                 owner.pubkey(),
                 owner_token_account,
@@ -190,26 +168,12 @@ pub async fn main() -> Result<()> {
                     a.is_writable
                 );
             }
-            let hash = rpc.get_latest_blockhash().await?;
-            let tx = Transaction::new_signed_with_payer(
-                &[
-                    burn_inx,
-                    spl_memo::build_memo("github.com/carteraMesh/nitrogen".as_bytes(), &[
-                        &owner.pubkey()
-                    ]),
-                ],
-                Some(&owner.pubkey()),
-                &[&owner, &message_sent_event_account],
-                hash,
-            );
-            let sig = broadcast(&rpc, tx).await?;
-            reclaim(
-                &rpc,
-                format!("{sig}"),
-                owner,
-                message_sent_event_account.pubkey(),
-            )
-            .await?;
+            let tx = burn_inx.tx().push(spl_memo::build_memo(
+                "github.com/carteraMesh/nitrogen".as_bytes(),
+                &[&owner.pubkey()],
+            ));
+            let sig = tx.send(&rpc, Some(&owner.pubkey()), &[&owner]).await?;
+            log::info!("{sig}");
             Ok(())
         }
         command::Commands::Reclaim {

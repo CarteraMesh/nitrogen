@@ -30,7 +30,7 @@ fn main() -> anyhow::Result<()> {
                     if options.event_hints.is_some() {
                         anyhow::bail!("The '--event-hints' option can only be used with --codama.");
                     }
-                    handlers::parse(path, options.output, options.crate_name)?;
+                    handlers::parse(path, options.output, options.crate_name, options.filter)?;
                 }
             },
             IdlSource::ProgramAddress(program_address) => {

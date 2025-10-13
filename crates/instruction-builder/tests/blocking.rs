@@ -44,6 +44,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::expect_fun_call)]
     fn init() -> anyhow::Result<(Keypair, RpcClient)> {
         setup();
         let kp_file = env::var("KEYPAIR_FILE").ok();

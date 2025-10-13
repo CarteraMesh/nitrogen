@@ -1,4 +1,9 @@
-use {super::super::types::*, solana_instruction::AccountMeta, solana_pubkey::Pubkey};
+use {
+    super::super::types::*,
+    nitrogen_instruction_builder::{InstructionBuilder, derive_pda},
+    solana_instruction::AccountMeta,
+    solana_pubkey::Pubkey,
+};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
 pub struct DepositForBurn {
@@ -14,8 +19,8 @@ impl borsh::BorshSerialize for DepositForBurn {
 }
 
 impl DepositForBurn {
-    pub fn build(
-        &self,
+    pub fn accounts(
+        self,
         owner: Pubkey,
         event_rent_payer: Pubkey,
         burn_token_account: Pubkey,
@@ -26,13 +31,13 @@ impl DepositForBurn {
         burn_token_mint: Pubkey,
         message_sent_event_data: Pubkey,
         program: Pubkey,
-    ) -> solana_instruction::Instruction {
+    ) -> InstructionBuilder<Self> {
         let mut accounts: Vec<AccountMeta> = Vec::with_capacity(18);
         accounts.push(AccountMeta::new_readonly(owner, true));
         accounts.push(AccountMeta::new(event_rent_payer, true));
-        accounts.push(crate::derive_pda(&[b"sender_authority"], &crate::ID, true));
+        accounts.push(derive_pda(&[b"sender_authority"], &crate::ID, true));
         accounts.push(AccountMeta::new(burn_token_account, false));
-        accounts.push(crate::derive_pda(
+        accounts.push(derive_pda(
             &[b"denylist_account", owner.as_ref()],
             &crate::ID,
             true,
@@ -41,7 +46,7 @@ impl DepositForBurn {
         accounts.push(AccountMeta::new_readonly(token_messenger, false));
         accounts.push(AccountMeta::new_readonly(remote_token_messenger, false));
         accounts.push(AccountMeta::new_readonly(token_minter, false));
-        accounts.push(crate::derive_pda(
+        accounts.push(derive_pda(
             &[b"local_token", burn_token_mint.as_ref()],
             &crate::ID,
             false,
@@ -64,8 +69,12 @@ impl DepositForBurn {
             solana_pubkey::pubkey!("11111111111111111111111111111111"),
             false,
         ));
-        accounts.push(crate::derive_pda(&[b"__event_authority"], &crate::ID, true));
+        accounts.push(derive_pda(&[b"__event_authority"], &crate::ID, true));
         accounts.push(AccountMeta::new_readonly(program, false));
-        solana_instruction::Instruction::new_with_borsh(crate::ID, self, accounts)
+        InstructionBuilder::builder()
+            .accounts(accounts)
+            .program_id(crate::ID)
+            .params(self)
+            .build()
     }
 }

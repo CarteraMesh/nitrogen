@@ -261,10 +261,13 @@ pub fn legacy_process_instructions(idl: &LegacyIdl) -> Vec<InstructionData> {
     instructions_data
 }
 
-pub fn process_instructions(idl: &Idl) -> Vec<InstructionData> {
+pub fn process_instructions(idl: &Idl, filter: &[String]) -> Vec<InstructionData> {
     let mut instructions_data = Vec::new();
 
     for instruction in &idl.instructions {
+        if !filter.is_empty() && !filter.contains(&instruction.name) {
+            continue;
+        }
         let mut requires_imports = false;
         let module_name = instruction.name.to_snake_case();
         let struct_name = instruction.name.to_upper_camel_case();

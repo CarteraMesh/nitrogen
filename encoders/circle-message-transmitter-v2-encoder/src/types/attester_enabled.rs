@@ -1,6 +1,7 @@
 #[derive(
     Debug,
     borsh::BorshSerialize,
+    borsh::BorshDeserialize,
     bon::Builder,
     serde::Serialize,
     serde::Deserialize,

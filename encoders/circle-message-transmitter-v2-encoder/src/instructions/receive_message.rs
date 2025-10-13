@@ -1,4 +1,9 @@
-use {super::super::types::*, solana_instruction::AccountMeta, solana_pubkey::Pubkey};
+use {
+    super::super::types::*,
+    nitrogen_instruction_builder::{InstructionBuilder, derive_pda},
+    solana_instruction::AccountMeta,
+    solana_pubkey::Pubkey,
+};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
 pub struct ReceiveMessage {
@@ -14,19 +19,19 @@ impl borsh::BorshSerialize for ReceiveMessage {
 }
 
 impl ReceiveMessage {
-    pub fn build(
-        &self,
+    pub fn accounts(
+        self,
         payer: Pubkey,
         caller: Pubkey,
         message_transmitter: Pubkey,
         used_nonce: Pubkey,
         receiver: Pubkey,
         program: Pubkey,
-    ) -> solana_instruction::Instruction {
+    ) -> InstructionBuilder<Self> {
         let mut accounts: Vec<AccountMeta> = Vec::with_capacity(9);
         accounts.push(AccountMeta::new(payer, true));
         accounts.push(AccountMeta::new_readonly(caller, true));
-        accounts.push(crate::derive_pda(
+        accounts.push(derive_pda(
             &[b"message_transmitter_authority", receiver.as_ref()],
             &crate::ID,
             true,
@@ -38,8 +43,12 @@ impl ReceiveMessage {
             solana_pubkey::pubkey!("11111111111111111111111111111111"),
             false,
         ));
-        accounts.push(crate::derive_pda(&[b"__event_authority"], &crate::ID, true));
+        accounts.push(derive_pda(&[b"__event_authority"], &crate::ID, true));
         accounts.push(AccountMeta::new_readonly(program, false));
-        solana_instruction::Instruction::new_with_borsh(crate::ID, self, accounts)
+        InstructionBuilder::builder()
+            .accounts(accounts)
+            .program_id(crate::ID)
+            .params(self)
+            .build()
     }
 }

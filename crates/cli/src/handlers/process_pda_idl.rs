@@ -37,7 +37,7 @@ pub fn process_pda_idl(
 
     fs::write(&idl_path, idl)?;
 
-    handlers::parse(idl_path.clone(), output, crate_name).context("Couldn't parse IDL")?;
+    handlers::parse(idl_path.clone(), output, crate_name, None).context("Couldn't parse IDL")?;
 
     // Clean up: Delete the IDL file after parsing
     if Path::new(&idl_path).exists() {

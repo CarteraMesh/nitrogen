@@ -31,6 +31,7 @@ hex = "0.4"
 log = "0.45"
 nitrogen-circle-message-transmitter-v2-encoder  = { path = "./encoders/circle-message-transmitter-v2-encoder", version = "0.1.0" }
 nitrogen-circle-token-messenger-minter-v2-encoder = { path = "./encoders/circle-token-messenger-minter-v2-encoder", version = "0.1.0" }
+nitrogen-instruction-builder = { path = "./crates/instruction-builder", version = "0.1.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"

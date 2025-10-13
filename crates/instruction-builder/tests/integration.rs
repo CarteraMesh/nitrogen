@@ -33,6 +33,7 @@ mod tests {
         });
     }
 
+    #[allow(clippy::expect_fun_call)]
     fn init() -> anyhow::Result<(Keypair, RpcClient)> {
         setup();
         let kp_file = env::var("KEYPAIR_FILE").ok();
@@ -57,17 +58,10 @@ mod tests {
         pub memo: Vec<u8>,
     }
 
-    impl Into<MemoData> for &str {
-        fn into(self) -> MemoData {
+    impl From<&str> for MemoData {
+        fn from(value: &str) -> Self {
             MemoData {
-                memo: self.to_string().into_bytes(),
-            }
-        }
-    }
-    impl Into<MemoData> for String {
-        fn into(self) -> MemoData {
-            MemoData {
-                memo: self.into_bytes(),
+                memo: value.to_string().into_bytes(),
             }
         }
     }
@@ -173,38 +167,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_memo_data_conversions() -> anyhow::Result<()> {
-        let (kp, rpc) = init()?;
-        let accounts = vec![AccountMeta::new_readonly(kp.pubkey(), true)];
-
-        // Test &str conversion
-        let memo_str: MemoData = "String slice memo".into();
-        let builder1 = InstructionBuilder::builder()
-            .program_id(spl_memo::id())
-            .accounts(accounts.clone())
-            .params(memo_str)
-            .build();
-
-        // Test String conversion
-        let memo_string: MemoData = String::from("Owned string memo").into();
-        let builder2 = InstructionBuilder::builder()
-            .program_id(spl_memo::id())
-            .accounts(accounts.clone())
-            .params(memo_string)
-            .build();
-
-        let tx = TransactionBuilder::builder()
-            .instructions(vec![])
-            .build()
-            .push(builder1)
-            .push(builder2);
-
-        let sig = tx.send(&rpc, Some(&kp.pubkey()), &[&kp]).await?;
-        info!("Memo conversions tx: {sig}");
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_empty_memo() -> anyhow::Result<()> {
         let (kp, rpc) = init()?;
         let memo: MemoData = "".into();
@@ -254,14 +216,5 @@ mod tests {
         let tx = builder.tx();
         assert_eq!(tx.instructions.len(), 1);
         assert_eq!(tx.instructions[0].program_id, spl_memo::id());
-    }
-
-    #[test]
-    fn test_memo_data_struct() {
-        let memo_from_str: MemoData = "Hello".into();
-        let memo_from_string: MemoData = String::from("World").into();
-
-        assert_eq!(memo_from_str.memo, b"Hello");
-        assert_eq!(memo_from_string.memo, b"World");
     }
 }

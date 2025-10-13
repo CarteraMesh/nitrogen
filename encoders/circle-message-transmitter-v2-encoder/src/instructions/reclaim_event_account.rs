@@ -1,4 +1,9 @@
-use {super::super::types::*, solana_instruction::AccountMeta, solana_pubkey::Pubkey};
+use {
+    super::super::types::*,
+    nitrogen_instruction_builder::InstructionBuilder,
+    solana_instruction::AccountMeta,
+    solana_pubkey::Pubkey,
+};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
 pub struct ReclaimEventAccount {
@@ -14,16 +19,20 @@ impl borsh::BorshSerialize for ReclaimEventAccount {
 }
 
 impl ReclaimEventAccount {
-    pub fn build(
-        &self,
+    pub fn accounts(
+        self,
         payee: Pubkey,
         message_transmitter: Pubkey,
         message_sent_event_data: Pubkey,
-    ) -> solana_instruction::Instruction {
+    ) -> InstructionBuilder<Self> {
         let mut accounts: Vec<AccountMeta> = Vec::with_capacity(3);
         accounts.push(AccountMeta::new(payee, true));
         accounts.push(AccountMeta::new(message_transmitter, false));
         accounts.push(AccountMeta::new(message_sent_event_data, false));
-        solana_instruction::Instruction::new_with_borsh(crate::ID, self, accounts)
+        InstructionBuilder::builder()
+            .accounts(accounts)
+            .program_id(crate::ID)
+            .params(self)
+            .build()
     }
 }

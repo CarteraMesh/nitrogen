@@ -44,6 +44,11 @@ pub struct ParseOptions {
     #[arg(short, long, required_if_eq("idl", "ProgramAddress"))]
     #[arg(help = "Network URL to fetch the IDL from. Required if input is a program address.")]
     pub url: Option<Url>,
+
+    #[arg(short = 'f', long)]
+    #[arg(help = "Comma-separated instruction names to generate (e.g., \
+                  deposit_for_burn,deposit_for_burn_with_hook).")]
+    pub filter: Option<String>,
 }
 
 #[derive(Parser)]

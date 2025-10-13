@@ -2,7 +2,7 @@
 use super::super::types::*;
 {%- endif %}
 {% raw %}
-use {solana_instruction::AccountMeta, solana_pubkey::Pubkey};
+use {nitrogen_instruction_builder::{InstructionBuilder, derive_pda}, solana_instruction::AccountMeta, solana_pubkey::Pubkey};
 {% endraw %}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
@@ -23,7 +23,7 @@ impl borsh::BorshSerialize for {{ instruction.struct_name }} {
 }
 
 impl {{ instruction.struct_name }} {
-    pub fn build(&self,
+    pub fn accounts(self,
         {%- for account in instruction.accounts %}
             {%- if account.pda.is_none() %}
               {%- if account.address.is_none() %}
@@ -34,11 +34,11 @@ impl {{ instruction.struct_name }} {
         {%- for pt in instruction.param_types %}
             {{ pt.name }}: {{ pt.rust_type }},
         {%- endfor %}
-    ) -> solana_instruction::Instruction {
+    ) ->  InstructionBuilder<Self> {
          let mut accounts: Vec<AccountMeta> = Vec::with_capacity({{ instruction.accounts.len() }});
          {%- for account in instruction.accounts %}
            {%- if let Some(pda) = account.pda %}
-         accounts.push(crate::derive_pda(&[
+         accounts.push(derive_pda(&[
              {%- for seed in pda.seeds %}
                {%- if let Some(pt) = seed.param_type %}
          {{ pt }},
@@ -66,6 +66,11 @@ impl {{ instruction.struct_name }} {
              {%- endif %}
            {%- endif %}
          {%- endfor %}
-        solana_instruction::Instruction::new_with_borsh(crate::ID, self, accounts)
+         InstructionBuilder::builder()
+            .accounts(accounts)
+            .program_id(crate::ID)
+            .params(self)
+            .build()
+
     }
 }

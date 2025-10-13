@@ -2,9 +2,9 @@
 name = "nitrogen-circle-token-messenger-minter-v2-encoder"
 version = "0.1.0"
 edition = { workspace = true }
-description = "Circle CCTP"
+description = "nitrogen-circle-token-messenger-minter-v2-encoder"
 license = { workspace = true }
-#readme = "README.md"
+readme = "README.md"
 repository = { workspace = true }
 keywords = ["solana", "idl"]
 categories = ["encoding"]
@@ -12,6 +12,7 @@ categories = ["encoding"]
 [dependencies]
 bon = { workspace = true }
 borsh = { workspace = true }
+nitrogen-instruction-builder = { workspace = true }
 serde = { workspace = true }
 solana-instruction = { workspace = true }
 solana-pubkey = { workspace = true }

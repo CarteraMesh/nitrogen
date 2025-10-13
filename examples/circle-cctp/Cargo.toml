@@ -15,6 +15,7 @@ dotenv = { workspace = true }
 log = { version = "0.4" }
 nitrogen-circle-message-transmitter-v2-encoder = { workspace = true }
 nitrogen-circle-token-messenger-minter-v2-encoder = { workspace = true }
+nitrogen-instruction-builder = { workspace = true }
 reqwest = { version = "0.12.11", features = ["json"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

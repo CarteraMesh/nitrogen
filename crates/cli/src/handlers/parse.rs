@@ -11,12 +11,21 @@ use {
     std::fs::{self},
 };
 
-pub fn parse(path: String, output: String, crate_name: Option<String>) -> Result<()> {
+pub fn parse(
+    path: String,
+    output: String,
+    crate_name: Option<String>,
+    filter: Option<String>,
+) -> Result<()> {
+    let filter_vec: Vec<String> = filter
+        .map(|f| f.split(',').map(|s| s.trim().to_string()).collect())
+        .unwrap_or_default();
+
     let (accounts_data, instructions_data, types_data, program_name, program_id) =
         match read_idl(&path) {
             Ok(idl) => {
                 let accounts_data = process_accounts(&idl);
-                let instructions_data = process_instructions(&idl);
+                let instructions_data = process_instructions(&idl, &filter_vec);
                 let types_data = process_types(&idl);
                 let program_name = idl.metadata.name;
                 let program_id = idl.address;
@@ -158,8 +167,8 @@ pub fn parse(path: String, output: String, crate_name: Option<String>) -> Result
     };
 
     if crate_name.is_some() {
-        let mut lib_rs_content = format!(
-            r#"use {{solana_instruction::AccountMeta, solana_pubkey::{{declare_id, Pubkey}}}};
+        let lib_rs_content = format!(
+            r#"use {{solana_instruction::AccountMeta, solana_pubkey::declare_id}};
 pub struct {encoder_name};
 pub mod accounts;
 pub mod instructions;
@@ -170,16 +179,6 @@ declare_id!("{program_id}");
 "#,
             encoder_name = encoder_name,
             program_id = program_id
-        );
-        lib_rs_content.push_str(
-            r#"
-pub(crate) fn derive_pda(seeds: &[&[u8]], program_id: &Pubkey, read_only: bool) -> AccountMeta {
-  if read_only {
-   AccountMeta::new_readonly(Pubkey::find_program_address(seeds, program_id).0, false)
-  } else {
-  AccountMeta::new(Pubkey::find_program_address(seeds, program_id).0, false)
- }
-}            "#,
         );
         let lib_rs_filename = format!("{}/lib.rs", src_dir);
         fs::write(&lib_rs_filename, lib_rs_content).expect("Failed to write lib.rs file");
@@ -200,6 +199,7 @@ categories = ["encoding"]
 [dependencies]
 bon = {{ workspace = true }}
 borsh = {{ workspace = true }}
+nitrogen-instruction-builder = {{ workspace = true }}
 serde = {{ workspace = true }}
 solana-instruction = {{ workspace = true }}
 solana-pubkey = {{ workspace = true }}
