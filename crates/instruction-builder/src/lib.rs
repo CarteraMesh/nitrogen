@@ -1,7 +1,7 @@
-#[cfg(feature = "blocking")]
-use solana_rpc_client::rpc_client::RpcClient;
 #[cfg(not(feature = "blocking"))]
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
+#[cfg(feature = "blocking")]
+use solana_rpc_client::rpc_client::RpcClient;
 use {
     base64::prelude::*,
     borsh::BorshSerialize,

@@ -48,7 +48,8 @@ mod tests {
         setup();
         let kp_file = env::var("KEYPAIR_FILE").ok();
         let owner = if let Some(kp) = kp_file {
-            solana_keypair::read_keypair_file(&kp).expect(&format!("unable to load keypair file {kp}"))
+            solana_keypair::read_keypair_file(&kp)
+                .expect(&format!("unable to load keypair file {kp}"))
         } else {
             let kp = env::var("KEYPAIR").expect("KEYPAIR is not set");
             Keypair::from_base58_string(&kp)
@@ -65,14 +66,14 @@ mod tests {
         let (kp, rpc) = init()?;
         let memo: MemoData = "Blocking test".into();
         let accounts = vec![AccountMeta::new_readonly(kp.pubkey(), true)];
-        
+
         let tx = InstructionBuilder::builder()
             .program_id(spl_memo::id())
             .accounts(accounts)
             .params(memo)
             .build()
             .tx();
-        
+
         let sig = tx.send(&rpc, Some(&kp.pubkey()), &[&kp])?;
         info!("Blocking tx: {sig}");
         Ok(())
