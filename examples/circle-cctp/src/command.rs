@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "circle-cctp")]
@@ -7,17 +7,20 @@ pub struct Cli {
     pub command: Commands,
 }
 
+#[derive(Args)]
+pub struct BridgeArgs {
+    #[arg(long, default_value = "10")]
+    pub amount: u64,
+    #[arg(long, default_value = "6")]
+    pub destination_chain: u32,
+    #[arg(long, help = "default is to EVM")]
+    pub to_sol: bool,
+    pub destination: String,
+}
+
 #[derive(Subcommand)]
 pub enum Commands {
-    Bridge {
-        #[arg(long, default_value = "10")]
-        amount: u64,
-        #[arg(long, default_value = "6")]
-        destination_chain: u32,
-        destination: String,
-    },
+    Bridge(BridgeArgs),
     Reclaim,
-    Recv {
-        tx_hash: String,
-    },
+    Recv { tx_hash: String },
 }

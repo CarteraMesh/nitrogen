@@ -1,6 +1,7 @@
 use {
+    crate::command::BridgeArgs,
     alloy_primitives::Address,
-    anyhow::Result,
+    anyhow::{Ok, Result},
     clap::Parser,
     nitrogen_circle_message_transmitter_v2_encoder::{
         ID as MESSAGE_PROGRAM_ID,
@@ -10,13 +11,13 @@ use {
     },
     nitrogen_circle_token_messenger_minter_v2_encoder::{
         ID as TOKEN_MINTER_PROGRAM_ID,
-        helpers::deposit_for_burn_instruction,
+        helpers::{SOLANA_DEV_USDC_ADDRESS as SOLANA_USDC_ADDRESS, deposit_for_burn_instruction},
         types::DepositForBurnParams,
     },
     solana_commitment_config::CommitmentConfig,
     solana_instruction::Instruction,
     solana_keypair::Keypair,
-    solana_pubkey::{Pubkey, pubkey},
+    solana_pubkey::Pubkey,
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_rpc_client_api::config::RpcSimulateTransactionConfig,
     solana_signer::Signer,
@@ -25,7 +26,6 @@ use {
 };
 mod attestation;
 mod command;
-const SOLANA_USDC_ADDRESS: Pubkey = pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
 pub fn memo(message: &str) -> Instruction {
     Instruction {
@@ -100,6 +100,57 @@ fn get_keypair() -> Result<Keypair> {
     Ok(owner)
 }
 
+#[allow(unused_variables)]
+async fn evm_sol(args: BridgeArgs, owner: Keypair, rpc: RpcClient) -> Result<()> {
+    info!("sending to sol");
+    Ok(())
+}
+
+async fn sol_evm(args: BridgeArgs, owner: Keypair, rpc: RpcClient) -> Result<()> {
+    log::info!("burning...");
+    let message_sent_event_account = Keypair::new();
+    let evm_addr: Address = Address::parse_checksummed(args.destination, None)?;
+    // mintRecipient is a bytes32 type so pad with 0's then convert to a
+    // solana PublicKey
+    let mint_recipient = Pubkey::new_from_array(evm_addr.into_word().into());
+    let params = DepositForBurnParams::builder()
+        .amount(args.amount)
+        .destination_caller(Pubkey::default())
+        .mint_recipient(mint_recipient)
+        .max_fee(3)
+        .min_finality_threshold(0)
+        .destination_domain(args.destination_chain)
+        .build();
+    info!("Params\n{:?}", params);
+    let deposit_for_burn_tx = deposit_for_burn_instruction(
+        params,
+        owner.pubkey(),
+        message_sent_event_account.pubkey(),
+        SOLANA_USDC_ADDRESS,
+    );
+    for (i, a) in deposit_for_burn_tx.accounts.iter().enumerate() {
+        eprintln!(
+            "[{}]    {},signer={},mut={}",
+            i + 1,
+            a.pubkey,
+            a.is_signer,
+            a.is_writable
+        );
+    }
+    let tx = deposit_for_burn_tx.tx().push(spl_memo::build_memo(
+        "github.com/carteraMesh/nitrogen".as_bytes(),
+        &[&owner.pubkey()],
+    ));
+    let sig = tx
+        .send(&rpc, Some(&owner.pubkey()), &[
+            &owner,
+            &message_sent_event_account,
+        ])
+        .await?;
+    log::info!("{sig}");
+    Ok(())
+}
+
 #[allow(clippy::expect_fun_call)]
 #[tokio::main]
 pub async fn main() -> Result<()> {
@@ -107,7 +158,6 @@ pub async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let cli = command::Cli::parse();
     let owner = get_keypair()?;
-    let message_sent_event_account = Keypair::new();
 
     log::info!("using solana address {}", owner.pubkey());
 
@@ -115,59 +165,12 @@ pub async fn main() -> Result<()> {
     log::info!("using RPC {url}");
     let rpc = RpcClient::new_with_commitment(url, CommitmentConfig::finalized());
     match cli.command {
-        command::Commands::Bridge {
-            amount,
-            destination_chain,
-            destination,
-        } => {
-            log::info!("burning...");
-            let evm_addr: Address = Address::parse_checksummed(destination, None)?;
-            // mintRecipient is a bytes32 type so pad with 0's then convert to a
-            // solana PublicKey
-            let mint_recipient = Pubkey::new_from_array(evm_addr.into_word().into());
-            let params = DepositForBurnParams::builder()
-                .amount(amount)
-                .destination_caller(Pubkey::default())
-                .mint_recipient(mint_recipient)
-                .max_fee(3)
-                .min_finality_threshold(0)
-                .destination_domain(destination_chain)
-                .build();
-            let deposit_for_burn_tx = deposit_for_burn_instruction(
-                params,
-                owner.pubkey(),
-                destination_chain,
-                message_sent_event_account.pubkey(),
-                SOLANA_USDC_ADDRESS,
-                TOKEN_MINTER_PROGRAM_ID,
-            );
-
-            eprintln!("amount: {amount}");
-            eprintln!("destination: {destination_chain}",);
-            eprintln!("mint recipient: {mint_recipient}");
-            eprintln!("maxFee: 3");
-            eprintln!("minFinalityThreshold: 0");
-            for (i, a) in deposit_for_burn_tx.accounts.iter().enumerate() {
-                eprintln!(
-                    "[{}]    {},signer={},mut={}",
-                    i + 1,
-                    a.pubkey,
-                    a.is_signer,
-                    a.is_writable
-                );
+        command::Commands::Bridge(args) => {
+            if !args.to_sol {
+                sol_evm(args, owner, rpc).await
+            } else {
+                evm_sol(args, owner, rpc).await
             }
-            let tx = deposit_for_burn_tx.tx().push(spl_memo::build_memo(
-                "github.com/carteraMesh/nitrogen".as_bytes(),
-                &[&owner.pubkey()],
-            ));
-            let sig = tx
-                .send(&rpc, Some(&owner.pubkey()), &[
-                    &owner,
-                    &message_sent_event_account,
-                ])
-                .await?;
-            log::info!("{sig}");
-            Ok(())
         }
         command::Commands::Reclaim => {
             reclaim(&rpc, owner).await?;
