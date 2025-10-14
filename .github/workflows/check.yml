@@ -151,10 +151,7 @@ jobs:
         run: cargo install --locked cargo-sort
       - name: Check `Cargo.toml` sort
         run: |
-          cargo sort -c -g
-          for c in crates/cli crates/instruction-builder ; do
-            (cd $c && cargo sort -c -g)
-          done
+          ./scripts/cargo-sort.sh
 
   machete:
     runs-on: ${{ vars.RUNNER }}

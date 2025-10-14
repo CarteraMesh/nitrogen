@@ -15,12 +15,12 @@ bon = { workspace = true }
 borsh = { workspace = true }
 nitrogen-instruction-builder = { workspace = true }
 serde = { workspace = true }
-spl-associated-token-account = { workspace = true }
-spl-token = { workspace = true }
 solana-instruction = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rpc-client = { workspace = true }
 solana-rpc-client-api = { workspace = true }
+spl-associated-token-account = { workspace = true }
+spl-token = { workspace = true }
 
 [lints]
 workspace = true

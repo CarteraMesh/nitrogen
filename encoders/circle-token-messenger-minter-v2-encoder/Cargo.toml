@@ -14,10 +14,9 @@ bon = { workspace = true }
 borsh = { workspace = true }
 nitrogen-instruction-builder = { workspace = true }
 serde = { workspace = true }
-spl-associated-token-account = { workspace = true }
 solana-instruction = { workspace = true }
 solana-pubkey = { workspace = true }
-
+spl-associated-token-account = { workspace = true }
 
 [lints]
 workspace = true
