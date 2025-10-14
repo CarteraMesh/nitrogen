@@ -13,7 +13,6 @@ dotenv = { workspace = true }
 log = { workspace = true }
 nitrogen-circle-message-transmitter-v2-encoder = { workspace = true }
 nitrogen-circle-token-messenger-minter-v2-encoder = { workspace = true }
-nitrogen-instruction-builder = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -22,6 +21,7 @@ solana-instruction = { workspace = true }
 solana-keypair = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rpc-client = { workspace = true }
+solana-rpc-client-api = { workspace = true }
 solana-signer = { workspace = true }
 spl-memo = { workspace = true }
 tokio = { workspace = true, features = ["full"] }

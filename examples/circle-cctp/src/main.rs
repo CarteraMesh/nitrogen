@@ -3,8 +3,8 @@ use {
     anyhow::Result,
     clap::Parser,
     nitrogen_circle_message_transmitter_v2_encoder::{
-        ID as MESSENGER_PROGRAM_ID,
-        helpers::{fee_recipient_token_account, recv_from_attestation, remaining_accounts},
+        ID as MESSAGE_PROGRAM_ID,
+        helpers::{receive_message_helpers, reclaim_event_account_helpers},
         instructions::reclaim_event_account,
         types::ReclaimEventAccountParams,
     },
@@ -13,12 +13,12 @@ use {
         helpers::deposit_for_burn_instruction,
         types::DepositForBurnParams,
     },
-    nitrogen_instruction_builder::IntoInstruction,
     solana_commitment_config::CommitmentConfig,
     solana_instruction::Instruction,
     solana_keypair::Keypair,
     solana_pubkey::{Pubkey, pubkey},
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
+    solana_rpc_client_api::config::RpcSimulateTransactionConfig,
     solana_signer::Signer,
     std::env,
     tracing::info,
@@ -34,10 +34,6 @@ pub fn memo(message: &str) -> Instruction {
         data: message.as_bytes().to_vec(),
     }
 }
-fn derive_pda(seeds: &[&[u8]], program_id: &Pubkey) -> Pubkey {
-    Pubkey::find_program_address(seeds, program_id).0
-}
-
 async fn fetch_attestation(
     sig: String,
     chain: Option<u32>,
@@ -46,44 +42,48 @@ async fn fetch_attestation(
     attestation::get_attestation_with_retry(sig, chain).await
 }
 
-async fn reclaim(
-    rpc: &RpcClient,
-    tx_hash: String,
-    owner: Keypair,
-    message_sent_event_account: Pubkey,
-) -> Result<()> {
-    let (attest, message) = fetch_attestation(tx_hash, None).await?;
-    log::info!(
-        "attestation: {}\nmessage: {}",
-        alloy_primitives::hex::encode(&attest),
-        alloy_primitives::hex::encode(&message),
-    );
-
-    let reclaim_account = reclaim_event_account(
-        ReclaimEventAccountParams::builder()
-            .attestation(attest)
-            .destination_message(message)
-            .build(),
-    );
-
-    let reclaim_tx = reclaim_account
-        .accounts(
-            owner.pubkey(),
-            derive_pda(&[b"message_transmitter"], &MESSENGER_PROGRAM_ID),
-            message_sent_event_account,
-        )
-        .tx()
-        .push(
-            spl_memo::build_memo("github.com/carteraMesh/nitrogen".as_bytes(), &[
-                &owner.pubkey()
-            ])
-            .into_instruction(),
+async fn reclaim(rpc: &RpcClient, owner: Keypair) -> Result<()> {
+    let reclaim_accounts =
+        reclaim_event_account_helpers::find_claimable_accounts(&owner.pubkey(), rpc).await?;
+    info!("reclaim accounts {reclaim_accounts}");
+    for account in reclaim_accounts.accounts {
+        if !account.is_claimable() {
+            info!("Skipping account {account}");
+            continue;
+        }
+        if account.signature.is_none() {
+            tracing::warn!("Skipping account {account} with no signature");
+            continue;
+        }
+        let sig = account.signature.unwrap_or_default();
+        let (attest, message) = fetch_attestation(sig, None).await?;
+        let reclaim_account = reclaim_event_account(
+            ReclaimEventAccountParams::builder()
+                .attestation(attest)
+                .destination_message(message)
+                .build(),
         );
+        let reclaim_tx = reclaim_account
+            .accounts(
+                owner.pubkey(),
+                Pubkey::find_program_address(&[b"message_transmitter"], &MESSAGE_PROGRAM_ID).0,
+                account.address,
+            )
+            .tx();
 
-    let sig = reclaim_tx
-        .send(rpc, Some(&owner.pubkey()), &[&owner])
-        .await?;
-    log::info!("{sig}");
+        info!("reclaiming {}", account.address);
+        reclaim_tx
+            .simulate(
+                Some(&owner.pubkey()),
+                &[&owner],
+                rpc,
+                RpcSimulateTransactionConfig {
+                    sig_verify: true,
+                    ..Default::default()
+                },
+            )
+            .await?;
+    }
     Ok(())
 }
 
@@ -169,11 +169,8 @@ pub async fn main() -> Result<()> {
             log::info!("{sig}");
             Ok(())
         }
-        command::Commands::Reclaim {
-            message_sent_event_account,
-            tx_hash,
-        } => {
-            reclaim(&rpc, tx_hash, owner, message_sent_event_account).await?;
+        command::Commands::Reclaim => {
+            reclaim(&rpc, owner).await?;
             Ok(())
         }
         command::Commands::Recv { tx_hash } => {
@@ -184,14 +181,21 @@ pub async fn main() -> Result<()> {
                 alloy_primitives::hex::encode(&attest),
                 alloy_primitives::hex::encode(&message),
             );
-            let builder =
-                recv_from_attestation(owner.pubkey(), TOKEN_MINTER_PROGRAM_ID, attest, message);
-            let fee_recipient =
-                fee_recipient_token_account(&rpc, &TOKEN_MINTER_PROGRAM_ID, &SOLANA_USDC_ADDRESS)
-                    .await?;
+            let builder = receive_message_helpers::recv_from_attestation(
+                owner.pubkey(),
+                TOKEN_MINTER_PROGRAM_ID,
+                attest,
+                message,
+            );
+            let fee_recipient = receive_message_helpers::fee_recipient_token_account(
+                &rpc,
+                &TOKEN_MINTER_PROGRAM_ID,
+                &SOLANA_USDC_ADDRESS,
+            )
+            .await?;
             let usdc_evm_addr: Address =
                 alloy_primitives::address!("0x036CbD53842c5426634e7929541eC2318f3dCF7e"); // base sepolia
-            let remaining_accounts = remaining_accounts(
+            let remaining_accounts = receive_message_helpers::remaining_accounts(
                 &owner.pubkey(),
                 "6".to_string(), // base sepolia
                 usdc_evm_addr.into_word(),

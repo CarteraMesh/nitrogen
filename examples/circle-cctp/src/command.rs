@@ -1,7 +1,4 @@
-use {
-    clap::{Parser, Subcommand},
-    solana_pubkey::Pubkey,
-};
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "circle-cctp")]
@@ -13,17 +10,13 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Bridge {
-        #[arg(long, default_value = "6")]
+        #[arg(long, default_value = "10")]
         amount: u64,
         #[arg(long, default_value = "6")]
         destination_chain: u32,
         destination: String,
     },
-    Reclaim {
-        message_sent_event_account: Pubkey,
-        tx_hash: String,
-    },
-
+    Reclaim,
     Recv {
         tx_hash: String,
     },
