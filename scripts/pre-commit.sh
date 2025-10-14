@@ -12,4 +12,5 @@ if ! cargo clippy --all-targets -- -D warnings; then
   exit 1
 fi
 ./scripts/cargo-sort.sh
+cargo machete
 echo "✅ All pre-commit checks passed!"
