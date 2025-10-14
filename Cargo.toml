@@ -43,7 +43,7 @@ solana-pubkey = { version = "2", features = ["serde", "borsh", "curve25519"] }
 solana-rpc-client = { version = "2" }
 solana-rpc-client-api = { version = "2" }
 solana-signer = { version = "2" }
-solana-signature = { version = "2" }
+solana-signature = { version = "3" }
 solana-transaction = { version = "2" }
 solana-keypair = "2"
 spl-associated-token-account = "7"
