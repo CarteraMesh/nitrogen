@@ -229,6 +229,13 @@ workspace = true
         fs::write(&mod_rs_filename, mod_rs_content).expect("Failed to write mod.rs file");
         println!("Generated {}", mod_rs_filename);
     }
-
+    let helper_filename = format!("{}/helpers.rs", src_dir);
+    if !fs::exists(&helper_filename).ok().unwrap_or_default() {
+        fs::write(
+            &helper_filename,
+            "// custom helper utilities for instructions",
+        )
+        .expect("Failed to write helpers.rs file");
+    }
     Ok(())
 }

@@ -10,7 +10,7 @@ use {
     },
     nitrogen_circle_token_messenger_minter_v2_encoder::{
         ID as TOKEN_MINTER_PROGRAM_ID,
-        instructions::deposit_for_burn,
+        helpers::deposit_for_burn_instruction,
         types::DepositForBurnParams,
     },
     nitrogen_instruction_builder::IntoInstruction,
@@ -125,54 +125,29 @@ pub async fn main() -> Result<()> {
             // mintRecipient is a bytes32 type so pad with 0's then convert to a
             // solana PublicKey
             let mint_recipient = Pubkey::new_from_array(evm_addr.into_word().into());
-            let deposit_for_burn = deposit_for_burn(
-                DepositForBurnParams::builder()
-                    .amount(amount)
-                    .destination_caller(Pubkey::default())
-                    .mint_recipient(mint_recipient)
-                    .max_fee(3)
-                    .min_finality_threshold(0)
-                    .destination_domain(destination_chain)
-                    .build(),
-            );
-
-            eprintln!("amount: {}", deposit_for_burn.params.amount);
-            eprintln!(
-                "destination: {}",
-                deposit_for_burn.params.destination_domain
-            );
-            eprintln!("mint recipient: {}", deposit_for_burn.params.mint_recipient);
-            eprintln!("maxFee: {}", deposit_for_burn.params.max_fee);
-            eprintln!(
-                "minFinalityThreshold: {}",
-                deposit_for_burn.params.min_finality_threshold
-            );
-            eprintln!(
-                "destinationCaller: {}",
-                deposit_for_burn.params.destination_caller
-            );
-            // log::info!(
-            //     "Send to {mint_recipient} on domain {DOMAIN} params:\n{}",
-            //     serde_json::to_string_pretty(&deposit_for_burn.params)?
-            // );
-            let owner_token_account = spl_associated_token_account::get_associated_token_address(
-                &owner.pubkey(),
-                &SOLANA_USDC_ADDRESS,
-            );
-            log::info!("token account {owner_token_account}");
-            let burn_inx = deposit_for_burn.accounts(
+            let params = DepositForBurnParams::builder()
+                .amount(amount)
+                .destination_caller(Pubkey::default())
+                .mint_recipient(mint_recipient)
+                .max_fee(3)
+                .min_finality_threshold(0)
+                .destination_domain(destination_chain)
+                .build();
+            let deposit_for_burn_tx = deposit_for_burn_instruction(
+                params,
                 owner.pubkey(),
-                owner.pubkey(),
-                owner_token_account,
-                derive_pda(&[b"message_transmitter"], &MESSENGER_PROGRAM_ID),
-                derive_pda(&[b"token_messenger"], &TOKEN_MINTER_PROGRAM_ID),
-                derive_pda(&[b"remote_token_messenger", b"6"], &TOKEN_MINTER_PROGRAM_ID),
-                derive_pda(&[b"token_minter"], &TOKEN_MINTER_PROGRAM_ID),
-                SOLANA_USDC_ADDRESS,
+                destination_chain,
                 message_sent_event_account.pubkey(),
+                SOLANA_USDC_ADDRESS,
                 TOKEN_MINTER_PROGRAM_ID,
             );
-            for (i, a) in burn_inx.accounts.iter().enumerate() {
+
+            eprintln!("amount: {amount}");
+            eprintln!("destination: {destination_chain}",);
+            eprintln!("mint recipient: {mint_recipient}");
+            eprintln!("maxFee: 3");
+            eprintln!("minFinalityThreshold: 0");
+            for (i, a) in deposit_for_burn_tx.accounts.iter().enumerate() {
                 eprintln!(
                     "[{}]    {},signer={},mut={}",
                     i + 1,
@@ -181,7 +156,7 @@ pub async fn main() -> Result<()> {
                     a.is_writable
                 );
             }
-            let tx = burn_inx.tx().push(spl_memo::build_memo(
+            let tx = deposit_for_burn_tx.tx().push(spl_memo::build_memo(
                 "github.com/carteraMesh/nitrogen".as_bytes(),
                 &[&owner.pubkey()],
             ));
