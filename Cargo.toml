@@ -41,7 +41,7 @@ solana-account-decoder-client-types = "2"
 solana-client = "2"
 solana-commitment-config = "2"
 solana-instruction = { version = "2", default-features = false, features = ["borsh", "std"] }
-solana-pubkey = { version = "2", features = ["serde", "borsh", "curve25519"] }
+solana-pubkey = { version = "3", features = ["serde", "borsh", "curve25519"] }
 solana-rpc-client = { version = "2" }
 solana-rpc-client-api = { version = "2" }
 solana-signer = { version = "2" }
