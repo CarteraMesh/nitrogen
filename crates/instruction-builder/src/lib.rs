@@ -1,3 +1,9 @@
+//! Wrapper around Solana SDK types for building instructions and transactions.
+//!
+//! See [`solana_instruction`], [`solana_transaction`], and
+//! [`solana_rpc_client`] for underlying types.
+#![doc = include_str!("../README.md")]
+
 use {
     borsh::BorshSerialize,
     solana_instruction::{AccountMeta, Instruction},
@@ -10,6 +16,10 @@ mod transaction;
 pub use {error::*, instruction::*, transaction::*};
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Derives a PDA and returns an [`AccountMeta`].
+///
+/// Wraps [`Pubkey::find_program_address`] and creates an [`AccountMeta`] with
+/// `is_signer: false`.
 pub fn derive_pda(seeds: &[&[u8]], program_id: &Pubkey, read_only: bool) -> AccountMeta {
     if read_only {
         AccountMeta::new_readonly(Pubkey::find_program_address(seeds, program_id).0, false)
@@ -18,6 +28,7 @@ pub fn derive_pda(seeds: &[&[u8]], program_id: &Pubkey, read_only: bool) -> Acco
     }
 }
 
+/// Converts types into [`Instruction`].
 pub trait IntoInstruction {
     fn into_instruction(self) -> Instruction;
 }
