@@ -24,6 +24,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          trigger_phrase: "@jobtaker"
           # Enable progress tracking
           track_progress: false
           # Your custom review instructions
