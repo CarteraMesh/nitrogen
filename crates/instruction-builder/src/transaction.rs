@@ -102,7 +102,7 @@ impl TransactionBuilder {
         let result = rpc
             .simulate_transaction_with_config(tx, config)
             .await
-            .map_err(|e| Error::SolanaRpcError(format!("failed simulate transaction: {e}")))?;
+            .map_err(|e| Error::SolanaRpcError(format!("failed to simulate transaction: {e}")))?;
 
         if let Some(e) = result.value.err {
             let logs = result.value.logs.unwrap_or(Vec::new());
