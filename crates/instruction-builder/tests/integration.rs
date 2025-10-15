@@ -217,4 +217,24 @@ mod tests {
         assert_eq!(tx.instructions.len(), 1);
         assert_eq!(tx.instructions[0].program_id, spl_memo::id());
     }
+
+    #[test]
+    fn test_extend_instruction() {
+        let memo: MemoData = "Test extend".into();
+        let accounts = vec![AccountMeta::new_readonly(Pubkey::new_unique(), true)];
+
+        let ix = InstructionBuilder::builder()
+            .program_id(spl_memo::id())
+            .accounts(accounts)
+            .params(memo)
+            .build()
+            .instruction();
+
+        let mut tx = TransactionBuilder::default();
+        tx.extend(vec![ix.clone(), ix.clone()]);
+
+        assert_eq!(tx.instructions.len(), 2);
+        assert_eq!(tx.instructions[0].program_id, spl_memo::id());
+        assert_eq!(tx.instructions[1].program_id, spl_memo::id());
+    }
 }

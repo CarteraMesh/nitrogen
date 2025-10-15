@@ -17,23 +17,30 @@ use {
     tracing::debug,
 };
 
-#[derive(bon::Builder, Debug)]
+/// Builder for creating and sending Solana [`Transaction`]s.
+///
+/// See [`RpcClient`] for underlying RPC methods.
+#[derive(bon::Builder, Debug, Clone, Default)]
 pub struct TransactionBuilder {
     pub instructions: Vec<Instruction>,
 }
 
 impl TransactionBuilder {
+    /// Adds an instruction to the transaction.
     pub fn push<T: IntoInstruction>(mut self, builder: T) -> Self {
         self.instructions.push(builder.into_instruction());
         self
     }
 
+    /// Appends multiple instructions to the transaction.
     pub fn append<T: BorshSerialize>(mut self, builders: Vec<InstructionBuilder<T>>) -> Self {
         self.instructions
             .extend(builders.into_iter().map(|b| b.instruction()));
         self
     }
 
+    /// Simulates, signs, and sends the transaction using
+    /// [`RpcClient::send_and_confirm_transaction`].
     #[cfg(feature = "blocking")]
     pub fn send<S: Signers + ?Sized>(
         &self,
@@ -67,6 +74,8 @@ impl TransactionBuilder {
             .map_err(|e| Error::SolanaRpcError(format!("failed to send transaction: {e}")))
     }
 
+    /// Simulates the transaction using
+    /// [`RpcClient::simulate_transaction_with_config`].
     #[cfg(not(feature = "blocking"))]
     pub async fn simulate<S: Signers + ?Sized>(
         &self,
@@ -112,6 +121,8 @@ impl TransactionBuilder {
         Ok(())
     }
 
+    /// Simulates, signs, and sends the transaction using
+    /// [`RpcClient::send_and_confirm_transaction`].
     #[cfg(not(feature = "blocking"))]
     pub async fn send<S: Signers + ?Sized>(
         &self,
@@ -138,6 +149,12 @@ impl TransactionBuilder {
         rpc.send_and_confirm_transaction(&tx)
             .await
             .map_err(|e| Error::SolanaRpcError(format!("failed to send transaction: {e}")))
+    }
+}
+
+impl Extend<Instruction> for TransactionBuilder {
+    fn extend<I: IntoIterator<Item = Instruction>>(&mut self, iter: I) {
+        self.instructions.extend(iter);
     }
 }
 
