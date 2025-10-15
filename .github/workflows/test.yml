@@ -8,6 +8,10 @@
 # See check.yml for information about how the concurrency cancellation and workflow triggering works
 permissions:
   contents: read
+env:
+  RPC_URL: ${{ secrets.RPC_URL }}
+  TEST_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
+  RUST_LOG: info
 on:
   push:
     branches: [main]
@@ -59,7 +63,7 @@ jobs:
         if: hashFiles('Cargo.lock') == ''
         run: cargo generate-lockfile
       - name: cargo build
-        run: cargo build --locked --all-features --all-targets
+        run: cargo build --locked --all-targets
   coverage:
     runs-on: ${{ vars.RUNNER }}
     name: ubuntu / stable / coverage
@@ -69,10 +73,8 @@ jobs:
         with:
           cache-on-failure: "true"
           cache-all-crates: "true"
-          cache-workspace-crates: "true"
           workspaces: |
             . -> target
-          cache-bin: "true"
       - name: Install stable
         uses: dtolnay/rust-toolchain@stable
         with:

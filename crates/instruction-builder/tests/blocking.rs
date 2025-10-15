@@ -52,7 +52,7 @@ mod tests {
             solana_keypair::read_keypair_file(&kp)
                 .expect(&format!("unable to load keypair file {kp}"))
         } else {
-            let kp = env::var("KEYPAIR").expect("KEYPAIR is not set");
+            let kp = env::var("TEST_PRIVATE_KEY").expect("TEST_PRIVATE_KEY is not set");
             Keypair::from_base58_string(&kp)
         };
         info!("using solana address {}", owner.pubkey());
