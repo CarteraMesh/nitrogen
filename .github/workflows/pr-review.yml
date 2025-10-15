@@ -1,15 +1,13 @@
-name: PR Review with Progress Tracking
-
-# This example demonstrates how to use the track_progress feature to get
-# visual progress tracking for PR reviews, similar to v0.x agent mode.
+name: PR Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+  workflow_dispatch:
+#  pull_request:
+#    types: [opened, synchronize, ready_for_review, reopened]
 
 jobs:
   review-with-tracking:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER }}
     permissions:
       contents: read
       pull-requests: write
