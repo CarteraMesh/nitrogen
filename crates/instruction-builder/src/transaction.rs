@@ -43,7 +43,7 @@ impl TransactionBuilder {
     ) -> Result<Signature> {
         let recent_blockhash = rpc
             .get_latest_blockhash()
-            .map_err(|e| crate::Error::SolanRpcError(e.to_string()))?;
+            .map_err(|e| Error::SolanaRpcError(format!("failed to get latest blockhash: {e}")))?;
         let tx = Transaction::new_signed_with_payer(
             &self.instructions,
             payer,
@@ -57,14 +57,14 @@ impl TransactionBuilder {
                 sig_verify: true,
                 ..RpcSimulateTransactionConfig::default()
             })
-            .map_err(|e| crate::Error::SolanRpcError(e.to_string()))?;
+            .map_err(|e| Error::SolanaRpcError(format!("failed to simulate: {e}")))?;
         if let Some(e) = result.value.err {
             let logs = result.value.logs.unwrap_or(Vec::new());
             let msg = format!("{e}\nbase64: {transaction_base64}\n{}", logs.join("\n"));
             return Err(Error::SolanaSimulateFailure(msg));
         }
         rpc.send_and_confirm_transaction(&tx)
-            .map_err(|e| crate::Error::SolanRpcError(e.to_string()))
+            .map_err(|e| Error::SolanaRpcError(format!("failed to send transaction: {e}")))
     }
 
     #[cfg(not(feature = "blocking"))]
@@ -78,7 +78,8 @@ impl TransactionBuilder {
         let recent_blockhash = rpc
             .get_latest_blockhash()
             .await
-            .map_err(|e| crate::Error::SolanRpcError(e.to_string()))?;
+            .map_err(|e| Error::SolanaRpcError(format!("failed to get latest blockhash: {e}")))?;
+
         let tx: VersionedTransaction = Transaction::new_signed_with_payer(
             &self.instructions,
             payer,
@@ -101,7 +102,7 @@ impl TransactionBuilder {
         let result = rpc
             .simulate_transaction_with_config(tx, config)
             .await
-            .map_err(|e| crate::Error::SolanRpcError(e.to_string()))?;
+            .map_err(|e| Error::SolanaRpcError(format!("failed to simulate transaction: {e}")))?;
 
         if let Some(e) = result.value.err {
             let logs = result.value.logs.unwrap_or(Vec::new());
@@ -121,7 +122,7 @@ impl TransactionBuilder {
         let recent_blockhash = rpc
             .get_latest_blockhash()
             .await
-            .map_err(|e| crate::Error::SolanRpcError(e.to_string()))?;
+            .map_err(|e| Error::SolanaRpcError(format!("failed to get latest blockhash: {e}")))?;
         let tx: VersionedTransaction = Transaction::new_signed_with_payer(
             &self.instructions,
             payer,
@@ -136,7 +137,7 @@ impl TransactionBuilder {
         .await?;
         rpc.send_and_confirm_transaction(&tx)
             .await
-            .map_err(|e| crate::Error::SolanRpcError(e.to_string()))
+            .map_err(|e| Error::SolanaRpcError(format!("failed to send transaction: {e}")))
     }
 }
 
