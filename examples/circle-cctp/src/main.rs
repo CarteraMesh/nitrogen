@@ -4,7 +4,6 @@ use {
     anyhow::{Ok, Result},
     clap::Parser,
     nitrogen_circle_message_transmitter_v2_encoder::{
-        ID as MESSAGE_PROGRAM_ID,
         helpers::{receive_message_helpers, reclaim_event_account_helpers},
         instructions::reclaim_event_account,
         types::ReclaimEventAccountParams,
@@ -64,11 +63,7 @@ async fn reclaim(rpc: &RpcClient, owner: Keypair) -> Result<()> {
                 .build(),
         );
         let reclaim_tx = reclaim_account
-            .accounts(
-                owner.pubkey(),
-                Pubkey::find_program_address(&[b"message_transmitter"], &MESSAGE_PROGRAM_ID).0,
-                account.address,
-            )
+            .accounts(owner.pubkey(), account.address)
             .tx();
 
         info!("reclaiming {}", account.address);

@@ -1,6 +1,6 @@
 use {
     super::super::types::*,
-    nitrogen_instruction_builder::InstructionBuilder,
+    nitrogen_instruction_builder::{InstructionBuilder, derive_pda},
     solana_instruction::AccountMeta,
     solana_pubkey::Pubkey,
 };
@@ -22,12 +22,11 @@ impl ReclaimEventAccount {
     pub fn accounts(
         self,
         payee: Pubkey,
-        message_transmitter: Pubkey,
         message_sent_event_data: Pubkey,
     ) -> InstructionBuilder<Self> {
         let mut accounts: Vec<AccountMeta> = Vec::with_capacity(3);
         accounts.push(AccountMeta::new(payee, true));
-        accounts.push(AccountMeta::new(message_transmitter, false));
+        accounts.push(derive_pda(&[b"message_transmitter"], &crate::ID, false));
         accounts.push(AccountMeta::new(message_sent_event_data, false));
         InstructionBuilder::builder()
             .accounts(accounts)
