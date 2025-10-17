@@ -1,12 +1,12 @@
 name: PR Review
 
 on:
-  workflow_dispatch:
-#  pull_request:
-#    types: [opened, synchronize, ready_for_review, reopened]
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
 
 jobs:
   review-with-tracking:
+    if: contains(github.event.pull_request.labels.*.name, 'jobtaker')
     runs-on: ${{ vars.RUNNER }}
     permissions:
       contents: read
@@ -43,8 +43,9 @@ jobs:
                - Review authentication/authorization logic
                - Check API documentation accuracy
 
-            Provide detailed feedback using inline comments for specific issues.
-            Use top-level comments for general observations or praise.
+            Provide detailed feedback using inline comments for ONLY issues, no praise inline comments.
+            Use top-level comments for general observations or praise
+            Do not be shy, I am a big boy and can handle criticism gracefully. I welcome feedback and suggestions.
 
           # Tools for comprehensive PR review
           claude_args: |
