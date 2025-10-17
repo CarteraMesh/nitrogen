@@ -5,6 +5,7 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
+      - dependency-name: "bincode"
       - dependency-name: "solana*"
       - dependency-name: "spl-*"
       - dependency-name: "*"
