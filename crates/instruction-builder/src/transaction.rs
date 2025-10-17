@@ -26,6 +26,12 @@ pub struct TransactionBuilder {
 }
 
 impl TransactionBuilder {
+    pub fn with_memo(mut self, memo: impl AsRef<[u8]>, signer_pubkeys: &[&Pubkey]) -> Self {
+        self.instructions
+            .push(spl_memo::build_memo(memo.as_ref(), signer_pubkeys));
+        self
+    }
+
     /// Adds an instruction to the transaction.
     pub fn push<T: IntoInstruction>(mut self, builder: T) -> Self {
         self.instructions.push(builder.into_instruction());
@@ -164,5 +170,27 @@ impl IntoIterator for TransactionBuilder {
 
     fn into_iter(self) -> Self::IntoIter {
         self.instructions.into_iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_with_memo() {
+        let tx = TransactionBuilder::default();
+        let pk = spl_memo::id();
+        let signer_pubkey = [&pk];
+        let ref_msg = &[72, 101, 108, 108, 111];
+        let tx = tx
+            .with_memo("Hello world", &signer_pubkey)
+            .with_memo(String::from("Hello"), &signer_pubkey)
+            .with_memo(vec![72, 101, 108, 108, 111], &signer_pubkey)
+            .with_memo(*ref_msg, &signer_pubkey)
+            .with_memo([72, 101, 108, 108, 111], &signer_pubkey)
+            .with_memo(b"Hello world", &signer_pubkey);
+
+        assert_eq!(tx.instructions.len(), 6);
     }
 }
