@@ -5,6 +5,9 @@ pub enum Error {
     #[error(transparent)]
     BincodeError(#[from] bincode::Error),
 
+    #[error("No instructions provided")]
+    NoInstructions,
+
     #[error("Failed simulation: {0}")]
     SolanaSimulateFailure(String),
 
@@ -25,4 +28,7 @@ pub enum Error {
 
     #[error(transparent)]
     SignerError(#[from] solana_signer::SignerError),
+
+    #[error(transparent)]
+    NumConversionError(#[from] std::num::TryFromIntError),
 }

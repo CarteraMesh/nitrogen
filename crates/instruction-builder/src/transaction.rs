@@ -2,21 +2,26 @@
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 #[cfg(feature = "blocking")]
 use solana_rpc_client::rpc_client::RpcClient;
+#[cfg(not(feature = "blocking"))]
+use solana_rpc_client_api::response::RpcSimulateTransactionResult;
 use {
     super::{Error, InstructionBuilder, IntoInstruction, Result},
     base64::prelude::*,
     borsh::BorshSerialize,
+    solana_compute_budget_interface::ComputeBudgetInstruction,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_message::{AddressLookupTableAccount, VersionedMessage, v0::Message},
     solana_pubkey::Pubkey,
-    solana_rpc_client_api::config::RpcSimulateTransactionConfig,
+    solana_rpc_client_api::{config::RpcSimulateTransactionConfig, response::RpcPrioritizationFee},
     solana_signature::Signature,
     solana_signer::signers::Signers,
     solana_transaction::versioned::VersionedTransaction,
     std::fmt::Debug,
     tracing::debug,
 };
+
+const SOLANA_MAX_COMPUTE_UNITS: u32 = 1_400_000;
 
 /// Builder/Helper for creating and sending Solana [`VersionedTransaction`]s,
 /// with [`AddressLookupTableAccount`] support
@@ -25,7 +30,7 @@ use {
 #[derive(bon::Builder, Clone, Default)]
 pub struct TransactionBuilder {
     pub instructions: Vec<Instruction>,
-    /// Pukeys that resolve to [`AddressLookupTableAccount`] via
+    /// [`Pubkey`]s that resolve to [`AddressLookupTableAccount`] via
     /// [`crate::lookup::fetch_lookup_tables`]
     pub lookup_tables_keys: Option<Vec<Pubkey>>,
 
@@ -89,7 +94,7 @@ impl TransactionBuilder {
         signers: &S,
         rpc: &RpcClient,
         config: RpcSimulateTransactionConfig,
-    ) -> Result<()> {
+    ) -> Result<RpcSimulateTransactionResult> {
         let tx = VersionedTransaction::try_new(self.create_message(payer, rpc).await?, signers)?;
         self.simulate_internal(rpc, &tx, config).await
     }
@@ -99,9 +104,9 @@ impl TransactionBuilder {
         rpc: &RpcClient,
         tx: &VersionedTransaction,
         config: RpcSimulateTransactionConfig,
-    ) -> Result<()> {
+    ) -> Result<RpcSimulateTransactionResult> {
         let transaction_base64 = BASE64_STANDARD.encode(bincode::serialize(&tx)?);
-        debug!("{transaction_base64}");
+        debug!("BASE64 tx: {transaction_base64}");
         let result = rpc
             .simulate_transaction_with_config(tx, config)
             .await
@@ -112,12 +117,12 @@ impl TransactionBuilder {
             let msg = format!("{e}\nbase64: {transaction_base64}\n{}", logs.join("\n"));
             return Err(Error::SolanaSimulateFailure(msg));
         }
-        Ok(())
+        Ok(result.value)
     }
 
     /// Simulates, signs, and sends the transaction using
     /// [`RpcClient::send_and_confirm_transaction`].
-    #[tracing::instrument(skip(self, rpc, signers), level = tracing::Level::INFO)]
+    #[tracing::instrument(skip(rpc, signers), level = tracing::Level::INFO)]
     pub async fn send<S: Signers + ?Sized>(
         &self,
         rpc: &RpcClient,
@@ -133,6 +138,85 @@ impl TransactionBuilder {
         rpc.send_and_confirm_transaction(&tx)
             .await
             .map_err(|e| Error::SolanaRpcError(format!("failed to send transaction: {e}")))
+    }
+
+    pub async fn get_recent_prioritization_fees(
+        rpc: &RpcClient,
+        accounts: &[Pubkey],
+    ) -> Result<Vec<RpcPrioritizationFee>> {
+        rpc.get_recent_prioritization_fees(accounts)
+            .await
+            .map_err(|e| {
+                Error::SolanaRpcError(format!("failed to get_recent_prioritization_fees: {e}"))
+            })
+    }
+
+    /// Quick and dirty fee estimation using recent prioritization fees.
+    ///
+    /// This convenience method fetches recent prioritization fees and
+    /// automatically adds ComputeBudget instructions to the beginning of
+    /// your transaction.
+    ///
+    /// ** NOTE ** use a real RPC Fee Service if you want more accurate fee
+    /// estimation.  This method is for convenience and may not be suitable
+    /// for all use cases.
+    ///
+    /// # Arguments
+    /// * `rpc` - RPC client for fetching recent fees
+    /// * `max_prioritization_fee` - Optional cap on prioritization fee
+    ///   (microlamports per CU)
+    /// * `accounts` - Accounts to filter prioritization fees for
+    /// * `percentile` - Fee percentile to use (default: 75th percentile)
+    ///
+    /// # Special Considerations
+    /// If you use priority fees with a Durable Nonce Transaction, you must
+    /// ensure the AdvanceNonce instruction is your transaction's first
+    /// instruction. This is critical to ensure your transaction is
+    /// successful; otherwise, it will fail.
+    ///
+    /// Reference: <https://solana.com/developers/guides/advanced/how-to-use-priority-fees>
+    #[tracing::instrument(skip(rpc, payer, accounts), level = tracing::Level::DEBUG)]
+    pub async fn with_priority_fees(
+        self,
+        payer: &Pubkey,
+        rpc: &RpcClient,
+        max_prioritization_fee: Option<u64>,
+        accounts: &[Pubkey],
+        percentile: Option<u8>,
+    ) -> Result<Self> {
+        if self.instructions.is_empty() {
+            return Err(crate::Error::NoInstructions);
+        }
+        if self
+            .instructions
+            .iter()
+            .any(|ix| ix.program_id == solana_compute_budget_interface::ID)
+        {
+            tracing::warn!("ComputeBudgetProgram already exists");
+            return Ok(self);
+        }
+        let fees = TransactionBuilder::get_recent_prioritization_fees(rpc, accounts).await?;
+        let message: VersionedMessage = self.create_message(payer, rpc).await?;
+        let num_sigs = message.header().num_required_signatures as usize;
+        let tx = VersionedTransaction {
+            signatures: vec![Signature::default(); num_sigs],
+            message,
+        };
+        let sim_result = self
+            .simulate_internal(rpc, &tx, RpcSimulateTransactionConfig {
+                sig_verify: false,
+                ..Default::default()
+            })
+            .await?;
+        Ok(self.calc_fees(
+            fees,
+            sim_result
+                .units_consumed
+                .unwrap_or(SOLANA_MAX_COMPUTE_UNITS as u64)
+                .try_into()?, // max default is 1_400_000
+            max_prioritization_fee,
+            percentile,
+        ))
     }
 }
 
@@ -190,6 +274,41 @@ impl TransactionBuilder {
     pub fn append<T: BorshSerialize>(mut self, builders: Vec<InstructionBuilder<T>>) -> Self {
         self.instructions
             .extend(builders.into_iter().map(|b| b.instruction()));
+        self
+    }
+
+    fn calc_fees(
+        mut self,
+        fees: Vec<RpcPrioritizationFee>,
+        compute_unit_limit: u32,
+        max_prioritization_fee: Option<u64>,
+        percentile: Option<u8>,
+    ) -> Self {
+        if fees.is_empty() {
+            tracing::warn!("no RpcPrioritizationFee to calculate fees");
+            return self;
+        }
+
+        let percentile = percentile.unwrap_or(75).min(100);
+        let mut sorted_fees: Vec<u64> = fees.iter().map(|f| f.prioritization_fee).collect();
+        sorted_fees.sort();
+
+        let index = (sorted_fees.len() * percentile as usize).saturating_sub(1) / 100;
+        let priority_fee = max_prioritization_fee
+            .map(|max| sorted_fees[index].min(max))
+            .unwrap_or(sorted_fees[index]);
+
+        // Add buffer but cap at Solana's maximum
+        let buffered_limit = compute_unit_limit
+            .saturating_add(compute_unit_limit / 10)
+            .min(SOLANA_MAX_COMPUTE_UNITS);
+        // Prepend compute budget instructions to the main instructions
+        let compute_budget_instructions = vec![
+            ComputeBudgetInstruction::set_compute_unit_limit(buffered_limit),
+            ComputeBudgetInstruction::set_compute_unit_price(priority_fee),
+        ];
+
+        self.instructions.splice(0..0, compute_budget_instructions);
         self
     }
 }

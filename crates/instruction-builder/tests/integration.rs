@@ -6,7 +6,7 @@ mod tests {
         solana_commitment_config::CommitmentConfig,
         solana_instruction::AccountMeta,
         solana_keypair::Keypair,
-        solana_pubkey::Pubkey,
+        solana_pubkey::{Pubkey, pubkey},
         solana_rpc_client::nonblocking::rpc_client::RpcClient,
         solana_signer::Signer,
         std::{env, sync::Once},
@@ -15,6 +15,16 @@ mod tests {
     };
     pub static INIT: Once = Once::new();
 
+    const TEST_LOOKUP_TABLE_ADDRESS: Pubkey =
+        pubkey!("njdSrqZgR1gZhLvGoX6wzhSioAczdN669SVt3nktiJe");
+    const RANDO: Pubkey = pubkey!("8X35rQUK2u9hfn8rMPwwr6ZSEUhbmfDPEapp589XyoM1");
+    fn random_instructions(payer: &Pubkey) -> Vec<solana_instruction::Instruction> {
+        vec![
+            solana_system_interface::instruction::transfer(payer, &RANDO, 1),
+            solana_system_interface::instruction::transfer(payer, &RANDO, 2),
+            solana_system_interface::instruction::transfer(payer, &RANDO, 3),
+        ]
+    }
     #[allow(clippy::unwrap_used, clippy::missing_panics_doc)]
     pub fn setup() {
         INIT.call_once(|| {
@@ -238,8 +248,56 @@ mod tests {
         assert_eq!(tx.instructions[1].program_id, spl_memo::id());
     }
 
+    #[tokio::test]
+    async fn test_fees() -> anyhow::Result<()> {
+        let (kp, rpc) = init()?;
+        let payer = kp.pubkey();
+        let tx: TransactionBuilder = random_instructions(&payer).into();
+        let tx = tx
+            .with_memo("github.com/carteraMesh", &[&payer])
+            .with_memo("nitrogen", &[&payer])
+            .with_lookup_keys(vec![TEST_LOOKUP_TABLE_ADDRESS])
+            .with_priority_fees(
+                &payer,
+                &rpc,
+                Some(1_000_000),
+                &[solana_system_interface::program::ID, spl_memo::ID],
+                Some(50),
+            )
+            .await?;
+
+        assert_eq!(
+            7,
+            tx.instructions.len(),
+            "size of instructions are not the same"
+        );
+        assert!(tx.instructions[0].program_id == solana_compute_budget_interface::ID);
+        assert!(tx.instructions[1].program_id == solana_compute_budget_interface::ID);
+
+        let tx = tx
+            .with_priority_fees(
+                &payer,
+                &rpc,
+                Some(1_000_000),
+                &[solana_system_interface::program::ID, spl_memo::ID],
+                Some(50),
+            )
+            .await?;
+
+        assert_eq!(
+            7,
+            tx.instructions.len(),
+            "size of instructions are not the same"
+        );
+        assert!(tx.instructions[0].program_id == solana_compute_budget_interface::ID);
+        assert!(tx.instructions[1].program_id == solana_compute_budget_interface::ID);
+
+        let sig = tx.send(&rpc, &payer, &[&kp]).await?;
+        info!("Computebudget with_priority_fees signature: {}", sig);
+        Ok(())
+    }
+
     #[cfg(test)]
-    #[cfg(not(feature = "blocking"))]
     mod lookups {
         use {
             super::*,
@@ -254,9 +312,7 @@ mod tests {
             pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
             pubkey!("8m3uKEn4fMPNVr7nv6RmQYktT4zRqEZzhuZDpG8hQZT4"),
         ];
-        const DEST: Pubkey = pubkey!("8X35rQUK2u9hfn8rMPwwr6ZSEUhbmfDPEapp589XyoM1");
-        const TEST_LOOKUP_TABLE_ADDRESS: Pubkey =
-            pubkey!("njdSrqZgR1gZhLvGoX6wzhSioAczdN669SVt3nktiJe");
+
         const TEST_LOOKUP_TABLE_STATE: [Pubkey; 6] = [
             pubkey!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
             pubkey!("11111111111111111111111111111111"),
@@ -285,14 +341,6 @@ mod tests {
             let result = fetch_lookup_tables(&[], &rpc).await?;
             assert!(result.is_empty());
             Ok(())
-        }
-
-        fn random_instructions(payer: &Pubkey) -> Vec<solana_instruction::Instruction> {
-            vec![
-                solana_system_interface::instruction::transfer(payer, &DEST, 1),
-                solana_system_interface::instruction::transfer(payer, &DEST, 2),
-                solana_system_interface::instruction::transfer(payer, &DEST, 3),
-            ]
         }
 
         #[tokio::test]
