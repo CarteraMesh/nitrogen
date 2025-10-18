@@ -18,14 +18,15 @@ use {
     tracing::debug,
 };
 
-/// Builder for creating and sending Solana [`Transaction`]s.
+/// Builder/Helper for creating and sending Solana [`VersionedTransaction`]s,
+/// with [`AddressLookupTableAccount`] support
 ///
-/// See [`RpcClient`] for underlying RPC methods.
+/// See [`VersionedTransaction`] and [`Message`] for official reference
 #[derive(bon::Builder, Clone, Default)]
 pub struct TransactionBuilder {
     pub instructions: Vec<Instruction>,
-    /// Keys to resolve to
-    /// [`AddressLookupTable`]
+    /// Pukeys that resolve to [`AddressLookupTableAccount`] via
+    /// [`crate::lookup::fetch_lookup_tables`]
     pub lookup_tables_keys: Option<Vec<Pubkey>>,
 
     /// For [`VersionedTransaction`]
@@ -80,7 +81,7 @@ impl TransactionBuilder {
         })
     }
 
-    /// Simulates the transaction using
+    /// Simulates the [`VersionedTransaction`] using
     /// [`RpcClient::simulate_transaction_with_config`].
     pub async fn simulate<S: Signers + ?Sized>(
         &self,
@@ -90,11 +91,6 @@ impl TransactionBuilder {
         config: RpcSimulateTransactionConfig,
     ) -> Result<()> {
         let tx = VersionedTransaction::try_new(self.create_message(payer, rpc).await?, signers)?;
-        self.simulate_internal(rpc, &tx, RpcSimulateTransactionConfig {
-            sig_verify: true,
-            ..Default::default()
-        })
-        .await?;
         self.simulate_internal(rpc, &tx, config).await
     }
 
@@ -141,21 +137,40 @@ impl TransactionBuilder {
 }
 
 impl TransactionBuilder {
+    /// When [`TransactionBuilder::send`] or [`TransactionBuilder::simulate`] is
+    /// called, these keys will be used via RPC and be converted into
+    /// [`AddressLookupTableAccount`].
     pub fn with_lookup_keys<I, P>(mut self, keys: I) -> Self
     where
         I: IntoIterator<Item = P>,
         P: Into<Pubkey>,
     {
-        self.lookup_tables_keys = Some(keys.into_iter().map(|k| k.into()).collect());
+        let new_keys: Vec<Pubkey> = keys.into_iter().map(|k| k.into()).collect();
+        match self.lookup_tables_keys {
+            Some(ref mut existing) => existing.extend(new_keys),
+            None => self.lookup_tables_keys = Some(new_keys),
+        }
         self
     }
 
+    /// This function takes precedence over
+    /// [`TransactionBuilder::with_lookup_keys`]
+    ///
+    ///
+    /// When [`TransactionBuilder::send`] or [`TransactionBuilder::simulate`] is
+    /// called, and will be used via RPC and be converted into
+    /// [`AddressLookupTableAccount`].
     pub fn with_address_tables<I, P>(mut self, keys: I) -> Self
     where
         I: IntoIterator<Item = P>,
         P: Into<AddressLookupTableAccount>,
     {
-        self.address_lookup_tables = Some(keys.into_iter().map(|k| k.into()).collect());
+        let new_tables: Vec<AddressLookupTableAccount> =
+            keys.into_iter().map(|k| k.into()).collect();
+        match self.address_lookup_tables {
+            Some(ref mut existing) => existing.extend(new_tables),
+            None => self.address_lookup_tables = Some(new_tables),
+        }
         self
     }
 
@@ -227,5 +242,44 @@ mod tests {
             .with_memo(b"Hello world", &signer_pubkey);
 
         assert_eq!(tx.instructions.len(), 6);
+    }
+
+    #[test]
+    fn test_with_lookup_keys_extending() {
+        let pk1 = Pubkey::new_unique();
+        let pk2 = Pubkey::new_unique();
+        let pk3 = Pubkey::new_unique();
+        let pk4 = Pubkey::new_unique();
+
+        let tx = TransactionBuilder::default()
+            .with_lookup_keys([pk1, pk2])
+            .with_lookup_keys(vec![pk3, pk4]);
+
+        assert_eq!(tx.lookup_tables_keys.as_ref().unwrap().len(), 4);
+        assert_eq!(tx.lookup_tables_keys.unwrap(), vec![pk1, pk2, pk3, pk4]);
+    }
+
+    #[test]
+    fn test_with_address_tables_extending() {
+        let pk1 = Pubkey::new_unique();
+        let pk2 = Pubkey::new_unique();
+
+        let table1 = AddressLookupTableAccount {
+            key: pk1,
+            addresses: vec![],
+        };
+        let table2 = AddressLookupTableAccount {
+            key: pk2,
+            addresses: vec![],
+        };
+
+        let tx = TransactionBuilder::default()
+            .with_address_tables([table1.clone()])
+            .with_address_tables(vec![table2.clone()]);
+
+        let tables = tx.address_lookup_tables.unwrap();
+        assert_eq!(tables.len(), 2);
+        assert_eq!(tables[0].key, pk1);
+        assert_eq!(tables[1].key, pk2);
     }
 }

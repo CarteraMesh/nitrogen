@@ -15,6 +15,12 @@ use {
     tracing::debug,
 };
 
+#[cfg(feature = "blocking")]
+fn get_multiple_accts(lookup_tables: &[Pubkey], rpc: &RpcClient) -> Result<Vec<Option<Account>>> {
+    rpc.get_multiple_accounts(lookup_tables)
+        .map_err(|e| Error::SolanaRpcError(format!("failed to get lookup table accounts: {e}")))
+}
+
 #[cfg(not(feature = "blocking"))]
 async fn get_multiple_accts(
     lookup_tables: &[Pubkey],
@@ -35,7 +41,7 @@ fn process_lookup_tables(
         match maybe_account {
             None => tracing::warn!("lookup table account {} not found", lookup_tables[i]),
             Some(account) => {
-                // for debugging
+                // Intentionally left here for future debugging if needed
                 // let data =
                 //     solana_address_lookup_table_interface::state::AddressLookupTable::deserialize(
                 //         account.data(),
@@ -97,7 +103,7 @@ pub async fn fetch_lookup_tables(
 
 /// Fetches lookup tables from the Solana blockchain.
 #[cfg(feature = "blocking")]
-pub async fn fetch_lookup_tables(
+pub fn fetch_lookup_tables(
     lookup_tables: &[Pubkey],
     rpc: &RpcClient,
 ) -> Result<Vec<AddressLookupTableAccount>> {

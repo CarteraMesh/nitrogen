@@ -24,10 +24,10 @@ struct MyParams {
     amount: u64,
 }
 
-const program_id: Pubkey = solana_pubkey::pubkey!("So11111111111111111111111111111111111111112");
+const PROGRAM_ID: Pubkey = solana_pubkey::pubkey!("So11111111111111111111111111111111111111112");
 // Build a single instruction
 let ix = InstructionBuilder::builder()
-    .program_id(program_id)
+    .program_id(PROGRAM_ID)
     .accounts(vec![AccountMeta::new(account, true)])
     .params(MyParams { amount: 100 })
     .build()
@@ -35,7 +35,7 @@ let ix = InstructionBuilder::builder()
 
 // Build and send a transaction
 let sig = InstructionBuilder::builder()
-    .program_id(program_id)
+    .program_id(PROGRAM_ID)
     .accounts(vec![AccountMeta::new(account, true)])
     .params(MyParams { amount: 100 })
     .build()
