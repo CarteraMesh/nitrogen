@@ -13,4 +13,5 @@ if ! cargo clippy --all-targets -- -D warnings; then
 fi
 ./scripts/cargo-sort.sh
 cargo machete
+cargo +nightly docs-rs -p nitrogen-instruction-builder
 echo "✅ All pre-commit checks passed!"
