@@ -31,4 +31,7 @@ pub enum Error {
 
     #[error(transparent)]
     NumConversionError(#[from] std::num::TryFromIntError),
+
+    #[error("Invalid compute units {0} {1}")]
+    InvalidComputeUnits(u64, String),
 }

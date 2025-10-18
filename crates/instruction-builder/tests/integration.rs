@@ -260,8 +260,8 @@ mod tests {
             .with_priority_fees(
                 &payer,
                 &rpc,
-                Some(1_000_000),
                 &[solana_system_interface::program::ID, spl_memo::ID],
+                Some(1_000_000),
                 Some(50),
             )
             .await?;
@@ -278,8 +278,8 @@ mod tests {
             .with_priority_fees(
                 &payer,
                 &rpc,
-                Some(1_000_000),
                 &[solana_system_interface::program::ID, spl_memo::ID],
+                Some(1_000_000),
                 Some(50),
             )
             .await?;
@@ -294,6 +294,44 @@ mod tests {
 
         let sig = tx.send(&rpc, &payer, &[&kp]).await?;
         info!("Computebudget with_priority_fees signature: {}", sig);
+
+        let tx: TransactionBuilder = random_instructions(&payer).into();
+        let sig = tx
+            .with_memo("github.com/carteraMesh", &[&payer])
+            .with_memo("nitrogen", &[&payer])
+            .with_lookup_keys(vec![TEST_LOOKUP_TABLE_ADDRESS])
+            .with_priority_fees(
+                &payer,
+                &rpc,
+                &[solana_system_interface::program::ID, spl_memo::ID],
+                None,
+                None,
+            )
+            .await?
+            .send(&rpc, &payer, &[&kp])
+            .await?;
+        info!(
+            "Computebudget with_priority_fees defaults signature: {}",
+            sig
+        );
+
+        let tx: TransactionBuilder = random_instructions(&payer).into();
+        let tx = tx
+            .with_memo("github.com/carteraMesh", &[&payer])
+            .with_memo("nitrogen", &[&payer])
+            .prepend_compute_budget_instructions(1_000_000, 200_000)?;
+
+        assert_eq!(
+            7,
+            tx.instructions.len(),
+            "size of instructions are not the same"
+        );
+        assert!(tx.instructions[0].program_id == solana_compute_budget_interface::ID);
+        assert!(tx.instructions[1].program_id == solana_compute_budget_interface::ID);
+        let result = tx.clone().prepend_compute_budget_instructions(1, 2);
+        assert!(result.is_err());
+        let result = tx.prepend_compute_budget_instructions(u32::MAX, 2);
+        assert!(result.is_err());
         Ok(())
     }
 

@@ -157,7 +157,7 @@ impl TransactionBuilder {
     /// automatically adds ComputeBudget instructions to the beginning of
     /// your transaction.
     ///
-    /// ** NOTE ** use a real RPC Fee Service if you want more accurate fee
+    /// **NOTE** use a real RPC Fee Service if you want more accurate fee
     /// estimation.  This method is for convenience and may not be suitable
     /// for all use cases.
     ///
@@ -165,14 +165,36 @@ impl TransactionBuilder {
     /// * `rpc` - RPC client for fetching recent fees
     /// * `max_prioritization_fee` - Optional cap on prioritization fee
     ///   (microlamports per CU)
-    /// * `accounts` - Accounts to filter prioritization fees for
+    /// * `accounts` - Write-locked account addresses to query for relevant
+    ///   prioritization fees. Fees are filtered to transactions that interact
+    ///   with these accounts. Use program IDs and frequently-accessed accounts
+    ///   for best results.
     /// * `percentile` - Fee percentile to use (default: 75th percentile)
     ///
+    /// # Example
+    /// ```no_run
+    /// # use nitrogen_instruction_builder::TransactionBuilder;
+    /// # use solana_pubkey::Pubkey;
+    /// # async fn example(builder: TransactionBuilder, payer: Pubkey, rpc: solana_rpc_client::nonblocking::rpc_client::RpcClient) -> Result<(), Box<dyn std::error::Error>> {
+    /// let tx = builder
+    ///     .with_priority_fees(
+    ///         &payer,
+    ///         &rpc,
+    ///         Some(5_000_000), // Cap at 5M microlamports/CU
+    ///         &[solana_system_interface::program::ID],
+    ///         Some(50), // Use 50th percentile (median)
+    ///     )
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     /// # Special Considerations
     /// If you use priority fees with a Durable Nonce Transaction, you must
     /// ensure the AdvanceNonce instruction is your transaction's first
     /// instruction. This is critical to ensure your transaction is
     /// successful; otherwise, it will fail.
+    ///
+    ///
     ///
     /// Reference: <https://solana.com/developers/guides/advanced/how-to-use-priority-fees>
     #[tracing::instrument(skip(rpc, payer, accounts), level = tracing::Level::DEBUG)]
@@ -180,8 +202,8 @@ impl TransactionBuilder {
         self,
         payer: &Pubkey,
         rpc: &RpcClient,
-        max_prioritization_fee: Option<u64>,
         accounts: &[Pubkey],
+        max_prioritization_fee: Option<u64>,
         percentile: Option<u8>,
     ) -> Result<Self> {
         if self.instructions.is_empty() {
@@ -196,27 +218,34 @@ impl TransactionBuilder {
             return Ok(self);
         }
         let fees = TransactionBuilder::get_recent_prioritization_fees(rpc, accounts).await?;
-        let message: VersionedMessage = self.create_message(payer, rpc).await?;
-        let num_sigs = message.header().num_required_signatures as usize;
-        let tx = VersionedTransaction {
-            signatures: vec![Signature::default(); num_sigs],
-            message,
-        };
+        let tx = self.unsigned_tx(payer, rpc).await?;
         let sim_result = self
             .simulate_internal(rpc, &tx, RpcSimulateTransactionConfig {
                 sig_verify: false,
                 ..Default::default()
             })
             .await?;
-        Ok(self.calc_fees(
-            fees,
-            sim_result
-                .units_consumed
-                .unwrap_or(SOLANA_MAX_COMPUTE_UNITS as u64)
-                .try_into()?, // max default is 1_400_000
-            max_prioritization_fee,
-            percentile,
-        ))
+
+        let units = sim_result
+            .units_consumed
+            .ok_or(crate::Error::InvalidComputeUnits(
+                0,
+                "RPC returned invalid units".to_string(),
+            ))?;
+        Ok(self.calc_fees(fees, units.try_into()?, max_prioritization_fee, percentile))
+    }
+
+    pub async fn unsigned_tx(
+        &self,
+        payer: &Pubkey,
+        rpc: &RpcClient,
+    ) -> Result<VersionedTransaction> {
+        let message = self.create_message(payer, rpc).await?;
+        let num_sigs = message.header().num_required_signatures as usize;
+        Ok(VersionedTransaction {
+            signatures: vec![Signature::default(); num_sigs],
+            message,
+        })
     }
 }
 
@@ -275,6 +304,35 @@ impl TransactionBuilder {
         self.instructions
             .extend(builders.into_iter().map(|b| b.instruction()));
         self
+    }
+
+    /// Add ComputeBudget instructions to beginning of the transaction. Fails if
+    /// ComputeBudget instructions are already present.
+    ///
+    ///
+    /// Use [`TransactionBuilder::unsigned_tx`] to get a transaction for
+    /// fee simulation.
+    pub fn prepend_compute_budget_instructions(
+        mut self,
+        units: u32,
+        priority_fees: u64,
+    ) -> Result<Self> {
+        if self
+            .instructions
+            .iter()
+            .any(|ix| ix.program_id == solana_compute_budget_interface::ID)
+        {
+            return Err(crate::Error::InvalidComputeUnits(
+                units.into(),
+                "computes is about max solana compute units".to_owned(),
+            ));
+        }
+
+        self.instructions.splice(0..0, vec![
+            ComputeBudgetInstruction::set_compute_unit_limit(units),
+            ComputeBudgetInstruction::set_compute_unit_price(priority_fees),
+        ]);
+        Ok(self)
     }
 
     fn calc_fees(
