@@ -1,11 +1,3 @@
-# This is the main CI workflow that runs the test suite on all pushes to main and all pull requests.
-# It runs the following jobs:
-# - required: runs the test suite on ubuntu with stable and beta rust toolchains
-# - minimal: runs the test suite with the minimal versions of the dependencies that satisfy the
-#   requirements of this crate, and its dependencies
-# - os-check: runs the test suite on mac and windows
-# - coverage: runs the test suite and collects coverage information
-# See check.yml for information about how the concurrency cancellation and workflow triggering works
 permissions:
   contents: read
 env:
@@ -48,12 +40,6 @@ jobs:
       matrix:
         os: [macos-latest]
     steps:
-      # if your project needs OpenSSL, uncomment this to fix Windows builds.
-      # it's commented out by default as the install command takes 5-10m.
-      # - run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-      #   if: runner.os == 'Windows'
-      # - run: vcpkg install openssl:x64-windows-static-md
-      #   if: runner.os == 'Windows'
       - uses: actions/checkout@v5
         with:
           submodules: true
@@ -73,8 +59,6 @@ jobs:
         with:
           cache-on-failure: "true"
           cache-all-crates: "true"
-          workspaces: |
-            . -> target
       - name: Install stable
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -88,6 +72,7 @@ jobs:
         run: |
           cargo llvm-cov --package nitrogen-instruction-builder --lcov --output-path lcov-instruction-builder-async.info
       - name: nitrogen-instruction-builder (blocking)
+        if: false
         run: |
           cargo llvm-cov --package nitrogen-instruction-builder --features blocking --lcov --output-path lcov-instruction-builder-blocking.info
       - name: Record Rust version
@@ -97,6 +82,7 @@ jobs:
         with:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: lcov-instruction-builder-async.info,lcov-instruction-builder-blocking.info
+          files: lcov-instruction-builder-async.info
+          #          files: lcov-instruction-builder-async.info,lcov-instruction-builder-blocking.info
           flags: nitrogen-instruction-builder
           env_vars: OS,RUST

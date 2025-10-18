@@ -13,4 +13,16 @@ pub enum Error {
 
     #[error(transparent)]
     BorshError(#[from] std::io::Error),
+
+    #[error(transparent)]
+    ParseAccountError(#[from] solana_account_decoder::parse_account_data::ParseAccountError),
+
+    #[error(transparent)]
+    ParsePubkeyError(#[from] solana_pubkey::ParsePubkeyError),
+
+    #[error(transparent)]
+    MessageError(#[from] solana_message::CompileError),
+
+    #[error(transparent)]
+    SignerError(#[from] solana_signer::SignerError),
 }

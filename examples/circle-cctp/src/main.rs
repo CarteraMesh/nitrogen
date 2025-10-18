@@ -69,7 +69,7 @@ async fn reclaim(rpc: &RpcClient, owner: Keypair) -> Result<()> {
         info!("reclaiming {}", account.address);
         reclaim_tx
             .simulate(
-                Some(&owner.pubkey()),
+                &owner.pubkey(),
                 &[&owner],
                 rpc,
                 RpcSimulateTransactionConfig {
@@ -137,7 +137,7 @@ async fn sol_evm(args: BridgeArgs, owner: Keypair, rpc: RpcClient) -> Result<()>
         &[&owner.pubkey()],
     ));
     let sig = tx
-        .send(&rpc, Some(&owner.pubkey()), &[
+        .send(&rpc, &owner.pubkey(), &[
             &owner,
             &message_sent_event_account,
         ])
@@ -212,7 +212,7 @@ pub async fn main() -> Result<()> {
                 );
             }
             let tx = builder.tx();
-            let sig = tx.send(&rpc, Some(&owner.pubkey()), &[&owner]).await?;
+            let sig = tx.send(&rpc, &owner.pubkey(), &[&owner]).await?;
             info!("Transaction signature: {}", sig);
             Ok(())
         }

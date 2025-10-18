@@ -12,8 +12,9 @@ use {
 
 mod error;
 mod instruction;
+mod lookup;
 mod transaction;
-pub use {error::*, instruction::*, transaction::*};
+pub use {error::*, instruction::*, lookup::*, transaction::*};
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Derives a PDA and returns an [`AccountMeta`].

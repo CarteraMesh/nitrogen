@@ -25,7 +25,7 @@ mod tests {
                 }
             }
             tracing_subscriber::fmt()
-                .with_target(false)
+                .with_target(true)
                 .with_level(true)
                 .with_span_events(FmtSpan::CLOSE)
                 .with_env_filter(EnvFilter::from_default_env())
@@ -76,7 +76,7 @@ mod tests {
             .accounts(accounts)
             .params(memo)
             .build();
-        let sig = b.tx().send(&rpc, Some(&kp.pubkey()), &[&kp]).await?;
+        let sig = b.tx().send(&rpc, &kp.pubkey(), &[&kp]).await?;
         info!("{sig}");
         Ok(())
     }
@@ -98,7 +98,7 @@ mod tests {
             .build()
             .push(instruction_builder);
 
-        let sig = tx.send(&rpc, Some(&kp.pubkey()), &[&kp]).await?;
+        let sig = tx.send(&rpc, &kp.pubkey(), &[&kp]).await?;
         info!("Single instruction tx: {sig}");
         Ok(())
     }
@@ -135,7 +135,7 @@ mod tests {
             .build()
             .append(builders);
 
-        let sig = tx.send(&rpc, Some(&kp.pubkey()), &[&kp]).await?;
+        let sig = tx.send(&rpc, &kp.pubkey(), &[&kp]).await?;
         info!("Multiple instructions tx: {sig}");
         Ok(())
     }
@@ -180,7 +180,7 @@ mod tests {
 
         let sig = instruction_builder
             .tx()
-            .send(&rpc, Some(&kp.pubkey()), &[&kp])
+            .send(&rpc, &kp.pubkey(), &[&kp])
             .await?;
         info!("Empty memo tx: {sig}");
         Ok(())
@@ -236,5 +236,121 @@ mod tests {
         assert_eq!(tx.instructions.len(), 2);
         assert_eq!(tx.instructions[0].program_id, spl_memo::id());
         assert_eq!(tx.instructions[1].program_id, spl_memo::id());
+    }
+
+    #[cfg(test)]
+    #[cfg(not(feature = "blocking"))]
+    mod lookups {
+        use {
+            super::*,
+            nitrogen_instruction_builder::fetch_lookup_tables,
+            solana_message::AddressLookupTableAccount,
+            solana_pubkey::pubkey,
+        };
+        const NOT_INITIALIZED: Pubkey = pubkey!("3W6YcoQyFcrSo6K9vixhM2Cfvtjv4KeKSH1FaEKJF1Ug");
+        const INITIALIZED: Pubkey = pubkey!("FNK9gB5E3cntDRiy3LHwtwQC6qhbVgdBLBMqjRZLEYiK");
+        const EXPECTED_TABLE: [Pubkey; 3] = [
+            pubkey!("So11111111111111111111111111111111111111112"),
+            pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
+            pubkey!("8m3uKEn4fMPNVr7nv6RmQYktT4zRqEZzhuZDpG8hQZT4"),
+        ];
+        const DEST: Pubkey = pubkey!("8X35rQUK2u9hfn8rMPwwr6ZSEUhbmfDPEapp589XyoM1");
+        const TEST_LOOKUP_TABLE_ADDRESS: Pubkey =
+            pubkey!("njdSrqZgR1gZhLvGoX6wzhSioAczdN669SVt3nktiJe");
+        const TEST_LOOKUP_TABLE_STATE: [Pubkey; 6] = [
+            pubkey!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+            pubkey!("11111111111111111111111111111111"),
+            pubkey!("ComputeBudget111111111111111111111111111111"),
+            pubkey!("AddressLookupTab1e1111111111111111111111111"),
+            pubkey!("8X35rQUK2u9hfn8rMPwwr6ZSEUhbmfDPEapp589XyoM1"),
+            pubkey!("215r9xfTFVYcE9g3fAUGowauM84egyUvFCbSo3LKNaep"),
+        ];
+        #[tokio::test]
+        async fn test_lookup_table() -> anyhow::Result<()> {
+            let (_, rpc) = init()?;
+
+            let result = fetch_lookup_tables(&[NOT_INITIALIZED], &rpc).await?;
+            assert!(result.is_empty());
+
+            let result = fetch_lookup_tables(&[INITIALIZED], &rpc).await?;
+            assert_eq!(1, result.len());
+            assert_eq!(result[0].key, INITIALIZED);
+            assert_eq!(result[0].addresses, EXPECTED_TABLE);
+
+            let result = fetch_lookup_tables(&[NOT_INITIALIZED, INITIALIZED], &rpc).await?;
+            assert_eq!(1, result.len());
+            assert_eq!(result[0].key, INITIALIZED);
+            assert_eq!(result[0].addresses, EXPECTED_TABLE);
+
+            let result = fetch_lookup_tables(&[], &rpc).await?;
+            assert!(result.is_empty());
+            Ok(())
+        }
+
+        fn random_instructions(payer: &Pubkey) -> Vec<solana_instruction::Instruction> {
+            vec![
+                solana_system_interface::instruction::transfer(payer, &DEST, 1),
+                solana_system_interface::instruction::transfer(payer, &DEST, 2),
+                solana_system_interface::instruction::transfer(payer, &DEST, 3),
+            ]
+        }
+
+        #[tokio::test]
+        async fn test_lookup_table_tx() -> anyhow::Result<()> {
+            let (kp, rpc) = init()?;
+            let pkg = "github.com/carteraMesh/nitrogen";
+            let op = "lookup_tables_keys";
+            let payer = kp.pubkey();
+            let sig = TransactionBuilder::builder()
+                .instructions(random_instructions(&payer))
+                .lookup_tables_keys(vec![TEST_LOOKUP_TABLE_ADDRESS])
+                .build()
+                .with_memo(op, &[&payer])
+                .with_memo(pkg, &[&payer])
+                .send(&rpc, &payer, &[&kp])
+                .await?;
+            info!("builder {op} {sig}");
+            let op = "address_lookup_table";
+            let sig = TransactionBuilder::builder()
+                .instructions(random_instructions(&payer))
+                .address_lookup_tables(vec![AddressLookupTableAccount {
+                    key: TEST_LOOKUP_TABLE_ADDRESS,
+                    addresses: TEST_LOOKUP_TABLE_STATE.to_vec(),
+                }])
+                .build()
+                .with_memo(op, &[&payer])
+                .with_memo(pkg, &[&payer])
+                .send(&rpc, &payer, &[&kp])
+                .await?;
+
+            info!("builder {op} {sig}");
+
+            let op = "with_lookup_keys";
+            let sig = TransactionBuilder::builder()
+                .instructions(random_instructions(&payer))
+                .build()
+                .with_lookup_keys(vec![TEST_LOOKUP_TABLE_ADDRESS])
+                .with_memo(op, &[&payer])
+                .with_memo(pkg, &[&payer])
+                .send(&rpc, &payer, &[&kp])
+                .await?;
+            info!("builder {op} {sig}");
+
+            let op = "with_address_tables";
+            let sig = TransactionBuilder::builder()
+                .instructions(random_instructions(&payer))
+                .build()
+                .with_address_tables(vec![AddressLookupTableAccount {
+                    key: TEST_LOOKUP_TABLE_ADDRESS,
+                    addresses: TEST_LOOKUP_TABLE_STATE.to_vec(),
+                }])
+                .with_memo(op, &[&payer])
+                .with_memo(pkg, &[&payer])
+                .send(&rpc, &payer, &[&kp])
+                .await?;
+            info!("builder {op} {sig}");
+
+            Ok(())
+        }
     }
 }
