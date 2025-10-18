@@ -37,15 +37,24 @@ reqwest = { version = "0.12.11", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+solana-account = { version = "2" , features = ["bincode"] }
+solana-account-decoder = "2"
 solana-account-decoder-client-types = "2"
+solana-address-lookup-table-interface = { version = "2", features = [
+    "bincode",
+    "bytemuck",
+] }
 solana-client = "2"
 solana-commitment-config = "2"
+solana-hash = "2"
 solana-instruction = { version = "2", default-features = false, features = ["borsh", "std"] }
+solana-message = { version = "2" }
 solana-pubkey = { version = "2", features = ["serde", "borsh", "curve25519"] }
 solana-rpc-client = { version = "2" }
 solana-rpc-client-api = { version = "2" }
 solana-signer = { version = "2" }
 solana-signature = { version = "2" }
+solana-system-interface = { version = "1" , features = ["bincode"] }
 solana-transaction = { version = "2" }
 solana-keypair = "2"
 spl-associated-token-account = "7"

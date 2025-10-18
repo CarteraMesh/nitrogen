@@ -2,110 +2,102 @@
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
 #[cfg(feature = "blocking")]
 use solana_rpc_client::rpc_client::RpcClient;
-#[cfg(not(feature = "blocking"))]
-use solana_transaction::versioned::VersionedTransaction;
 use {
     super::{Error, InstructionBuilder, IntoInstruction, Result},
     base64::prelude::*,
     borsh::BorshSerialize,
+    solana_hash::Hash,
     solana_instruction::Instruction,
+    solana_message::{AddressLookupTableAccount, VersionedMessage, v0::Message},
     solana_pubkey::Pubkey,
     solana_rpc_client_api::config::RpcSimulateTransactionConfig,
     solana_signature::Signature,
     solana_signer::signers::Signers,
-    solana_transaction::Transaction,
+    solana_transaction::versioned::VersionedTransaction,
+    std::fmt::Debug,
     tracing::debug,
 };
 
 /// Builder for creating and sending Solana [`Transaction`]s.
 ///
 /// See [`RpcClient`] for underlying RPC methods.
-#[derive(bon::Builder, Debug, Clone, Default)]
+#[derive(bon::Builder, Clone, Default)]
 pub struct TransactionBuilder {
     pub instructions: Vec<Instruction>,
+    /// Keys to resolve to
+    /// [`AddressLookupTable`]
+    pub lookup_tables_keys: Option<Vec<Pubkey>>,
+
+    /// For [`VersionedTransaction`]
+    pub address_lookup_tables: Option<Vec<AddressLookupTableAccount>>,
 }
 
+impl Debug for TransactionBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "#inxs={}", self.instructions.len())
+    }
+}
+
+#[cfg(feature = "blocking")]
+impl TransactionBuilder {}
+
+#[cfg(not(feature = "blocking"))]
 impl TransactionBuilder {
-    pub fn with_memo(mut self, memo: impl AsRef<[u8]>, signer_pubkeys: &[&Pubkey]) -> Self {
-        self.instructions
-            .push(spl_memo::build_memo(memo.as_ref(), signer_pubkeys));
-        self
+    async fn get_latest_blockhash(rpc: &RpcClient) -> Result<Hash> {
+        rpc.get_latest_blockhash()
+            .await
+            .map_err(|e| Error::SolanaRpcError(format!("failed to get latest blockhash: {e}")))
     }
 
-    /// Adds an instruction to the transaction.
-    pub fn push<T: IntoInstruction>(mut self, builder: T) -> Self {
-        self.instructions.push(builder.into_instruction());
-        self
-    }
-
-    /// Appends multiple instructions to the transaction.
-    pub fn append<T: BorshSerialize>(mut self, builders: Vec<InstructionBuilder<T>>) -> Self {
-        self.instructions
-            .extend(builders.into_iter().map(|b| b.instruction()));
-        self
-    }
-
-    /// Simulates, signs, and sends the transaction using
-    /// [`RpcClient::send_and_confirm_transaction`].
-    #[cfg(feature = "blocking")]
-    pub fn send<S: Signers + ?Sized>(
+    pub async fn create_message(
         &self,
+        payer: &Pubkey,
         rpc: &RpcClient,
-        payer: Option<&Pubkey>,
-        signers: &S,
-    ) -> Result<Signature> {
-        let recent_blockhash = rpc
-            .get_latest_blockhash()
-            .map_err(|e| Error::SolanaRpcError(format!("failed to get latest blockhash: {e}")))?;
-        let tx = Transaction::new_signed_with_payer(
-            &self.instructions,
-            payer,
-            signers,
-            recent_blockhash,
-        );
-        let transaction_base64 = BASE64_STANDARD.encode(bincode::serialize(&tx)?);
-        debug!("{transaction_base64}");
-        let result = rpc
-            .simulate_transaction_with_config(&tx, RpcSimulateTransactionConfig {
-                sig_verify: true,
-                ..RpcSimulateTransactionConfig::default()
-            })
-            .map_err(|e| Error::SolanaRpcError(format!("failed to simulate: {e}")))?;
-        if let Some(e) = result.value.err {
-            let logs = result.value.logs.unwrap_or(Vec::new());
-            let msg = format!("{e}\nbase64: {transaction_base64}\n{}", logs.join("\n"));
-            return Err(Error::SolanaSimulateFailure(msg));
-        }
-        rpc.send_and_confirm_transaction(&tx)
-            .map_err(|e| Error::SolanaRpcError(format!("failed to send transaction: {e}")))
+    ) -> Result<VersionedMessage> {
+        Ok(match &self.address_lookup_tables {
+            Some(accounts) => VersionedMessage::V0(Message::try_compile(
+                payer,
+                self.instructions.as_ref(),
+                accounts,
+                TransactionBuilder::get_latest_blockhash(rpc).await?,
+            )?),
+            None => match self.lookup_tables_keys {
+                Some(ref keys) => {
+                    let accounts = super::lookup::fetch_lookup_tables(keys, rpc).await?;
+                    VersionedMessage::V0(Message::try_compile(
+                        payer,
+                        self.instructions.as_ref(),
+                        &accounts,
+                        TransactionBuilder::get_latest_blockhash(rpc).await?,
+                    )?)
+                }
+                None => VersionedMessage::Legacy(solana_message::Message::new_with_blockhash(
+                    &self.instructions,
+                    Some(payer),
+                    &TransactionBuilder::get_latest_blockhash(rpc).await?,
+                )),
+            },
+        })
     }
 
     /// Simulates the transaction using
     /// [`RpcClient::simulate_transaction_with_config`].
-    #[cfg(not(feature = "blocking"))]
     pub async fn simulate<S: Signers + ?Sized>(
         &self,
-        payer: Option<&Pubkey>,
+        payer: &Pubkey,
         signers: &S,
         rpc: &RpcClient,
         config: RpcSimulateTransactionConfig,
     ) -> Result<()> {
-        let recent_blockhash = rpc
-            .get_latest_blockhash()
-            .await
-            .map_err(|e| Error::SolanaRpcError(format!("failed to get latest blockhash: {e}")))?;
-
-        let tx: VersionedTransaction = Transaction::new_signed_with_payer(
-            &self.instructions,
-            payer,
-            signers,
-            recent_blockhash,
-        )
-        .into();
+        let tx = VersionedTransaction::try_new(self.create_message(payer, rpc).await?, signers)?;
+        self.simulate_internal(rpc, &tx, RpcSimulateTransactionConfig {
+            sig_verify: true,
+            ..Default::default()
+        })
+        .await?;
         self.simulate_internal(rpc, &tx, config).await
     }
 
-    #[cfg(not(feature = "blocking"))]
     async fn simulate_internal(
         &self,
         rpc: &RpcClient,
@@ -129,24 +121,14 @@ impl TransactionBuilder {
 
     /// Simulates, signs, and sends the transaction using
     /// [`RpcClient::send_and_confirm_transaction`].
-    #[cfg(not(feature = "blocking"))]
+    #[tracing::instrument(skip(self, rpc, signers), level = tracing::Level::INFO)]
     pub async fn send<S: Signers + ?Sized>(
         &self,
         rpc: &RpcClient,
-        payer: Option<&Pubkey>,
+        payer: &Pubkey,
         signers: &S,
     ) -> Result<Signature> {
-        let recent_blockhash = rpc
-            .get_latest_blockhash()
-            .await
-            .map_err(|e| Error::SolanaRpcError(format!("failed to get latest blockhash: {e}")))?;
-        let tx: VersionedTransaction = Transaction::new_signed_with_payer(
-            &self.instructions,
-            payer,
-            signers,
-            recent_blockhash,
-        )
-        .into();
+        let tx = VersionedTransaction::try_new(self.create_message(payer, rpc).await?, signers)?;
         self.simulate_internal(rpc, &tx, RpcSimulateTransactionConfig {
             sig_verify: true,
             ..Default::default()
@@ -155,6 +137,59 @@ impl TransactionBuilder {
         rpc.send_and_confirm_transaction(&tx)
             .await
             .map_err(|e| Error::SolanaRpcError(format!("failed to send transaction: {e}")))
+    }
+}
+
+impl TransactionBuilder {
+    pub fn with_lookup_keys<I, P>(mut self, keys: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<Pubkey>,
+    {
+        self.lookup_tables_keys = Some(keys.into_iter().map(|k| k.into()).collect());
+        self
+    }
+
+    pub fn with_address_tables<I, P>(mut self, keys: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<AddressLookupTableAccount>,
+    {
+        self.address_lookup_tables = Some(keys.into_iter().map(|k| k.into()).collect());
+        self
+    }
+
+    pub fn with_memo(mut self, memo: impl AsRef<[u8]>, signer_pubkeys: &[&Pubkey]) -> Self {
+        self.instructions
+            .push(spl_memo::build_memo(memo.as_ref(), signer_pubkeys));
+        self
+    }
+
+    /// Adds an instruction to the transaction.
+    pub fn push<T: IntoInstruction>(mut self, builder: T) -> Self {
+        self.instructions.push(builder.into_instruction());
+        self
+    }
+
+    /// Appends multiple instructions to the transaction.
+    pub fn append<T: BorshSerialize>(mut self, builders: Vec<InstructionBuilder<T>>) -> Self {
+        self.instructions
+            .extend(builders.into_iter().map(|b| b.instruction()));
+        self
+    }
+}
+
+impl From<TransactionBuilder> for Vec<Instruction> {
+    fn from(builder: TransactionBuilder) -> Self {
+        builder.instructions
+    }
+}
+
+impl From<Vec<Instruction>> for TransactionBuilder {
+    fn from(instructions: Vec<Instruction>) -> Self {
+        TransactionBuilder::builder()
+            .instructions(instructions)
+            .build()
     }
 }
 

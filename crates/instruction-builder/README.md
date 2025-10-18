@@ -13,7 +13,7 @@ Wrapper around Solana SDK types for building instructions and transactions.
 
 ## Usage
 
-```rust
+```rust,no_run
 use nitrogen_instruction_builder::{InstructionBuilder, TransactionBuilder};
 use solana_instruction::AccountMeta;
 use solana_pubkey::Pubkey;
@@ -24,6 +24,7 @@ struct MyParams {
     amount: u64,
 }
 
+const program_id: Pubkey = solana_pubkey::pubkey!("So11111111111111111111111111111111111111112");
 // Build a single instruction
 let ix = InstructionBuilder::builder()
     .program_id(program_id)

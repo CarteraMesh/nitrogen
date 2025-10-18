@@ -22,13 +22,13 @@ impl<T: BorshSerialize> InstructionBuilder<T> {
 
     /// Converts to a [`TransactionBuilder`] with this instruction.
     pub fn tx(self) -> TransactionBuilder {
-        TransactionBuilder {
-            instructions: vec![Instruction::new_with_borsh(
+        TransactionBuilder::builder()
+            .instructions(vec![Instruction::new_with_borsh(
                 self.program_id,
                 &self.params,
                 self.accounts,
-            )],
-        }
+            )])
+            .build()
     }
 
     /// Builds the [`Instruction`] using [`Instruction::new_with_borsh`].
