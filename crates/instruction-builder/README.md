@@ -3,18 +3,16 @@
 [![Crates.io](https://img.shields.io/crates/v/nitrogen-instruction-builder.svg)](https://crates.io/crates/nitrogen-instruction-builder)
 [![CI](https://github.com/CarteraMesh/nitrogen/workflows/test/badge.svg)](https://github.com/CarteraMesh/nitrogen/actions)
 
-Wrapper around Solana SDK types for building instructions and transactions.
+Convenience utilities around Solana [Instructions](https://docs.rs/solana-instruction/latest/solana_instruction/struct.Instruction.html)
 
 ## Features
 
 - `InstructionBuilder` - Build Solana instructions with Borsh-serialized data
-- `TransactionBuilder` - Build and send transactions with simulation support
-- `blocking` feature - Use blocking RPC client instead of async
 
 ## Usage
 
 ```rust,no_run
-use nitrogen_instruction_builder::{InstructionBuilder, TransactionBuilder};
+use nitrogen_instruction_builder::InstructionBuilder;
 use solana_instruction::AccountMeta;
 use solana_pubkey::Pubkey;
 use borsh::BorshSerialize;
@@ -33,13 +31,4 @@ let ix = InstructionBuilder::builder()
     .build()
     .instruction();
 
-// Build and send a transaction
-let sig = InstructionBuilder::builder()
-    .program_id(PROGRAM_ID)
-    .accounts(vec![AccountMeta::new(account, true)])
-    .params(MyParams { amount: 100 })
-    .build()
-    .tx()
-    .send(&rpc, Some(&payer), &[&signer])
-    .await?;
 ```
