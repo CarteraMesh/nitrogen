@@ -4,6 +4,7 @@ use {
     anyhow::{Ok, Result},
     clap::Parser,
     nitrogen_circle_message_transmitter_v2_encoder::{
+        ID as MESSAGE_TRANSMITTER_PROGRAM_ID,
         helpers::{receive_message_helpers, reclaim_event_account_helpers},
         instructions::reclaim_event_account,
         types::ReclaimEventAccountParams,
@@ -20,8 +21,16 @@ use {
     solana_rpc_client::nonblocking::rpc_client::RpcClient,
     solana_rpc_client_api::config::RpcSimulateTransactionConfig,
     solana_signer::Signer,
-    std::env,
-    tracing::info,
+    soly::{
+        BlockHashCacheProvider,
+        LookupTableCacheProvider,
+        SimpleCacheProvider,
+        SolanaRpcProvider,
+        TraceNativeProvider,
+        TransactionBuilder,
+    },
+    std::{env, time::Duration},
+    tracing::{Level, info, span},
 };
 mod attestation;
 mod command;
@@ -41,17 +50,28 @@ async fn fetch_attestation(
     attestation::get_attestation_with_retry(sig, chain).await
 }
 
-async fn reclaim(rpc: &RpcClient, owner: Keypair) -> Result<()> {
+async fn reclaim<T: SolanaRpcProvider + AsRef<RpcClient> + Send + Sync>(
+    rpc: &T,
+    owner: Keypair,
+) -> Result<()> {
     let reclaim_accounts =
         reclaim_event_account_helpers::find_claimable_accounts(&owner.pubkey(), rpc).await?;
     info!("reclaim accounts {reclaim_accounts}");
+    let mut fee: Option<u64> = None;
+    let mut units: Option<u32> = None;
     for account in reclaim_accounts.accounts {
+        let span = span!(
+            Level::INFO,
+            "reclaim-account",
+            acct = ?account.address,
+        );
+        let _guard = span.enter();
         if !account.is_claimable() {
-            info!("Skipping account {account}");
+            info!("Skipping account");
             continue;
         }
         if account.signature.is_none() {
-            tracing::warn!("Skipping account {account} with no signature");
+            tracing::warn!("Skipping account with no signature");
             continue;
         }
         let sig = account.signature.unwrap_or_default();
@@ -62,12 +82,47 @@ async fn reclaim(rpc: &RpcClient, owner: Keypair) -> Result<()> {
                 .destination_message(message)
                 .build(),
         );
-        let reclaim_tx = reclaim_account
-            .accounts(owner.pubkey(), account.address)
-            .tx();
+        let reclaim_tx = TransactionBuilder::from(
+            reclaim_account
+                .accounts(owner.pubkey(), account.address)
+                .instruction(),
+        );
 
-        info!("reclaiming {}", account.address);
-        reclaim_tx
+        let reclaim_tx = match (units, fee) {
+            (Some(units), Some(fee)) => {
+                reclaim_tx.prepend_compute_budget_instructions(units, fee)?
+            }
+            (Some(_), None) => {
+                return Err(anyhow::format_err!(
+                    "fee and units should be both none or some"
+                ));
+            }
+            (None, Some(_)) => {
+                return Err(anyhow::format_err!(
+                    "fee and units should be both none or some"
+                ));
+            }
+            (None, None) => {
+                let fee_result = reclaim_tx
+                    .calc_fee(
+                        &owner.pubkey(),
+                        rpc,
+                        &[
+                            MESSAGE_TRANSMITTER_PROGRAM_ID,
+                            solana_system_interface::program::ID,
+                        ],
+                        60_000_000,
+                        Some(50),
+                    )
+                    .await?;
+                fee = Some(fee_result.priority_fee);
+                units = Some((fee_result.units + 10_000).min(1_400_000)); //max units
+                reclaim_tx.prepend_compute_budget_instructions(units.unwrap(), fee.unwrap())?
+            }
+        };
+
+        info!("reclaiming");
+        let result = reclaim_tx
             .simulate(
                 &owner.pubkey(),
                 &[&owner],
@@ -78,6 +133,10 @@ async fn reclaim(rpc: &RpcClient, owner: Keypair) -> Result<()> {
                 },
             )
             .await?;
+        info!(
+            "compute units {}",
+            result.units_consumed.unwrap_or_default()
+        );
     }
     Ok(())
 }
@@ -96,13 +155,13 @@ fn get_keypair() -> Result<Keypair> {
 }
 
 #[allow(unused_variables)]
-async fn evm_sol(args: BridgeArgs, owner: Keypair, rpc: RpcClient) -> Result<()> {
-    info!("sending to sol");
+async fn evm_sol(args: BridgeArgs, owner: Keypair, rpc: TraceNativeProvider) -> Result<()> {
+    info!("TBD sending to sol");
     Ok(())
 }
 
-async fn sol_evm(args: BridgeArgs, owner: Keypair, rpc: RpcClient) -> Result<()> {
-    log::info!("burning...");
+async fn sol_evm(args: BridgeArgs, owner: Keypair, rpc: TraceNativeProvider) -> Result<()> {
+    info!("burning...");
     let message_sent_event_account = Keypair::new();
     let evm_addr: Address = Address::parse_checksummed(args.destination, None)?;
     // mintRecipient is a bytes32 type so pad with 0's then convert to a
@@ -132,33 +191,45 @@ async fn sol_evm(args: BridgeArgs, owner: Keypair, rpc: RpcClient) -> Result<()>
             a.is_writable
         );
     }
-    let tx = deposit_for_burn_tx.tx().push(spl_memo::build_memo(
-        "github.com/carteraMesh/nitrogen".as_bytes(),
-        &[&owner.pubkey()],
-    ));
+    let tx = TransactionBuilder::from(deposit_for_burn_tx.instruction())
+        .with_memo("github.com/carteraMesh/nitrogen", &[&owner.pubkey()])
+        .with_priority_fees(
+            &owner.pubkey(),
+            &rpc,
+            &[TOKEN_MINTER_PROGRAM_ID, spl_token::ID],
+            60_000_000,
+            Some(50),
+        )
+        .await?;
     let sig = tx
         .send(&rpc, &owner.pubkey(), &[
             &owner,
             &message_sent_event_account,
         ])
         .await?;
-    log::info!("{sig}");
+    info!("{sig}");
     Ok(())
 }
 
 #[allow(clippy::expect_fun_call)]
 #[tokio::main]
 pub async fn main() -> Result<()> {
-    dotenv::dotenv().ok();
-    tracing_subscriber::fmt::init();
+    dotenvy::dotenv_override().ok();
+    tracing_subscriber::fmt()
+//             .with_target(true)
+             .with_level(true)
+             .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+             .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+             .init();
     let cli = command::Cli::parse();
     let owner = get_keypair()?;
 
-    log::info!("using solana address {}", owner.pubkey());
+    info!("using solana address {}", owner.pubkey());
 
     let url = env::var("RPC_URL").expect("RPC_URL is not set");
-    log::info!("using RPC {url}");
-    let rpc = RpcClient::new_with_commitment(url, CommitmentConfig::finalized());
+    info!("using RPC {url}");
+    let rpc: TraceNativeProvider =
+        RpcClient::new_with_commitment(url, CommitmentConfig::finalized()).into();
     match cli.command {
         command::Commands::Bridge(args) => {
             if !args.to_sol {
@@ -168,13 +239,33 @@ pub async fn main() -> Result<()> {
             }
         }
         command::Commands::Reclaim => {
+            let hash_cache = BlockHashCacheProvider::new(rpc.clone(), Duration::from_secs(30));
+            let lookup_cache = LookupTableCacheProvider::builder()
+                .inner(rpc.clone())
+                .lookup_cache(
+                    soly::Cache::builder()
+                        .time_to_live(Duration::from_secs(86400))
+                        .build(),
+                )
+                .negative_cache(
+                    soly::Cache::builder()
+                        .time_to_live(Duration::from_secs(600))
+                        .build(),
+                )
+                .build();
+
+            let rpc = SimpleCacheProvider::builder()
+                .inner(rpc.clone())
+                .blockhash_cache(hash_cache.into())
+                .lookup_cache(lookup_cache.into())
+                .build();
             reclaim(&rpc, owner).await?;
             Ok(())
         }
         command::Commands::Recv { tx_hash } => {
             info!("recv for {tx_hash}");
             let (attest, message) = fetch_attestation(tx_hash, Some(6)).await?;
-            log::info!(
+            info!(
                 "attestation: {}\nmessage: {}",
                 alloy_primitives::hex::encode(&attest),
                 alloy_primitives::hex::encode(&message),
@@ -185,12 +276,9 @@ pub async fn main() -> Result<()> {
                 attest,
                 message,
             );
-            let fee_recipient = receive_message_helpers::fee_recipient_token_account(
-                &rpc,
-                &TOKEN_MINTER_PROGRAM_ID,
-                &SOLANA_USDC_ADDRESS,
-            )
-            .await?;
+            let fee_recipient =
+                receive_message_helpers::fee_recipient_token_account(&rpc, &SOLANA_USDC_ADDRESS)
+                    .await?;
             let usdc_evm_addr: Address =
                 alloy_primitives::address!("0x036CbD53842c5426634e7929541eC2318f3dCF7e"); // base sepolia
             let remaining_accounts = receive_message_helpers::remaining_accounts(
@@ -211,7 +299,7 @@ pub async fn main() -> Result<()> {
                     a.is_writable
                 );
             }
-            let tx = builder.tx();
+            let tx = TransactionBuilder::from(builder.instruction());
             let sig = tx.send(&rpc, &owner.pubkey(), &[&owner]).await?;
             info!("Transaction signature: {}", sig);
             Ok(())
