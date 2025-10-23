@@ -2,7 +2,7 @@
 name = "nitrogen-instruction-builder"
 version = "0.1.0"
 edition = { workspace = true }
-description = "Solana Instruction builder for nitrogen framework/encoders"
+description = "Solana instruction builder for nitrogen IDL encoder framework"
 license = { workspace = true }
 readme = "README.md"
 repository = { workspace = true }

@@ -11,12 +11,14 @@ categories = ["encoding"]
 
 [dependencies]
 alloy-primitives = { workspace = true }
+async-trait = { workspace = true }
 base64 = { workspace = true }
 bon = { workspace = true }
 borsh = { workspace = true }
 humantime = { workspace = true }
 nitrogen-instruction-builder = { workspace = true }
 serde = { workspace = true }
+solana-account = { workspace = true }
 solana-account-decoder-client-types = { workspace = true }
 solana-client = { workspace = true }
 solana-instruction = { workspace = true }

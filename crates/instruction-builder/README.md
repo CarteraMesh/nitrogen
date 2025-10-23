@@ -3,11 +3,11 @@
 [![Crates.io](https://img.shields.io/crates/v/nitrogen-instruction-builder.svg)](https://crates.io/crates/nitrogen-instruction-builder)
 [![CI](https://github.com/CarteraMesh/nitrogen/workflows/test/badge.svg)](https://github.com/CarteraMesh/nitrogen/actions)
 
-Convenience utilities around Solana [Instructions](https://docs.rs/solana-instruction/latest/solana_instruction/struct.Instruction.html)
+Lightweight builder utilities for Solana [Instructions](https://docs.rs/solana-instruction/latest/solana_instruction/struct.Instruction.html).
 
 ## Features
 
-- `InstructionBuilder` - Build Solana instructions with Borsh-serialized data
+- `InstructionBuilder` - Minimal builder for Solana instructions with Borsh-serialized data. Similar to [anchor-client](https://crates.io/crates/anchor-client) but lighter. Part of the [nitrogen](https://github.com/carteraMesh/nitrogen) framework that converts Solana IDLs to pure Rust code (no macros).
 
 ## Usage
 

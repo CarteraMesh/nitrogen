@@ -9,8 +9,7 @@ repository.workspace = true
 alloy-primitives = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
-dotenv = { workspace = true }
-log = { workspace = true }
+dotenvy = { workspace = true }
 nitrogen-circle-message-transmitter-v2-encoder = { workspace = true }
 nitrogen-circle-token-messenger-minter-v2-encoder = { workspace = true }
 reqwest = { workspace = true }
@@ -23,7 +22,10 @@ solana-pubkey = { workspace = true }
 solana-rpc-client = { workspace = true }
 solana-rpc-client-api = { workspace = true }
 solana-signer = { workspace = true }
+solana-system-interface = { workspace = true }
+soly = { git = "https://github.com/CarteraMesh/soly.git", branch = "main" }
 spl-memo = { workspace = true }
+spl-token = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
