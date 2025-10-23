@@ -16,7 +16,7 @@ too_many_arguments = "allow"
 [workspace.dependencies]
 alloy-primitives  = "1"
 anyhow = "1"
-askama = "0.12"
+askama = "0.14"
 async-trait = "0.1"
 base64 = "0.22"
 bincode = "1"
