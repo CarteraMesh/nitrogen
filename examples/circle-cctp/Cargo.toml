@@ -23,7 +23,7 @@ solana-rpc-client = { workspace = true }
 solana-rpc-client-api = { workspace = true }
 solana-signer = { workspace = true }
 solana-system-interface = { workspace = true }
-soly = { git = "https://github.com/CarteraMesh/soly.git", branch = "main" }
+soly = { version = "0.1.1-rc.1" }
 spl-memo = { workspace = true }
 spl-token = { workspace = true }
 tokio = { workspace = true, features = ["full"] }

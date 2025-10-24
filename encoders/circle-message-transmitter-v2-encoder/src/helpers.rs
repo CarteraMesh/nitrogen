@@ -1,6 +1,7 @@
 use {
     crate::{accounts::MessageSent, types::ReclaimEventAccountParams},
     solana_account::Account,
+    solana_client::nonblocking::rpc_client::RpcClient,
     solana_pubkey::Pubkey,
     solana_rpc_client_api::client_error::Result as ClientResult,
     std::{
@@ -13,7 +14,7 @@ pub const TOKEN_MINTER_PROGRAM_ID: Pubkey =
     solana_pubkey::pubkey!("CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe");
 
 #[async_trait::async_trait]
-pub trait ReclaimAccountRpcState {
+pub trait ReclaimAccountRpcState: Send + Sync {
     async fn get_reclaim_accounts(&self, owner: &Pubkey) -> ClientResult<Vec<(Pubkey, Account)>>;
     async fn get_reclaim_account_signature(&self, account: &Pubkey)
     -> ClientResult<Option<String>>;
@@ -21,7 +22,7 @@ pub trait ReclaimAccountRpcState {
 
 /// The fee account is owned by Circle and is used to pay for CCTP fees.
 #[async_trait::async_trait]
-pub trait FeeRecipientFetcher {
+pub trait FeeRecipientFetcher: Send + Sync {
     async fn get_fee_recipient_token_account(
         &self,
         circle_usdc_address: &Pubkey,
