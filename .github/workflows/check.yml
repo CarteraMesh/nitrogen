@@ -127,10 +127,7 @@ jobs:
         uses: dtolnay/install@cargo-docs-rs
       - name: cargo docs-rs
         run: |
-          LIBS=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.targets[] | .kind[] == "lib") | .name' | tr '\n' ' ')
-          for lib in $LIBS; do
-            cargo docs-rs -p $lib
-          done
+          ./scripts/docsrs.sh
 
   cargo_sort:
     runs-on: ${{ vars.RUNNER }}
