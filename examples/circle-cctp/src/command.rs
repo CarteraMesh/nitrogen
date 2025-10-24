@@ -1,4 +1,7 @@
-use clap::{Args, Parser, Subcommand};
+use {
+    clap::{Args, Parser, Subcommand},
+    std::fmt::Debug,
+};
 
 #[derive(Parser)]
 #[command(name = "circle-cctp")]
@@ -8,7 +11,7 @@ pub struct Cli {
 }
 
 #[derive(Args)]
-pub struct BridgeArgs {
+pub struct BurnArgs {
     #[arg(long, default_value = "10")]
     pub amount: u64,
     #[arg(long, default_value = "6")]
@@ -18,9 +21,19 @@ pub struct BridgeArgs {
     pub destination: String,
 }
 
+impl Debug for BurnArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[amount={},dest={},chain={}]",
+            self.amount, self.destination, self.destination_chain
+        )
+    }
+}
+
 #[derive(Subcommand)]
 pub enum Commands {
-    Bridge(BridgeArgs),
+    Burn(BurnArgs),
     Reclaim,
     Recv { tx_hash: String },
 }

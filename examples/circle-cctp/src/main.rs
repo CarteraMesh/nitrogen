@@ -1,13 +1,11 @@
 use {
-    crate::command::BridgeArgs,
+    crate::command::BurnArgs,
     alloy_primitives::Address,
     anyhow::{Ok, Result},
     clap::Parser,
     nitrogen_circle_message_transmitter_v2_encoder::{
         ID as MESSAGE_TRANSMITTER_PROGRAM_ID,
         helpers::{receive_message_helpers, reclaim_event_account_helpers},
-        instructions::reclaim_event_account,
-        types::ReclaimEventAccountParams,
     },
     nitrogen_circle_token_messenger_minter_v2_encoder::{
         ID as TOKEN_MINTER_PROGRAM_ID,
@@ -25,8 +23,8 @@ use {
         BlockHashCacheProvider,
         LookupTableCacheProvider,
         SimpleCacheProvider,
-        SolanaRpcProvider,
-        TraceNativeProvider,
+        SolanaRpcProviderNative,
+        TraceRpcNativeProvider,
         TransactionBuilder,
     },
     std::{env, time::Duration},
@@ -50,10 +48,7 @@ async fn fetch_attestation(
     attestation::get_attestation_with_retry(sig, chain).await
 }
 
-async fn reclaim<T: SolanaRpcProvider + AsRef<RpcClient> + Send + Sync>(
-    rpc: &T,
-    owner: Keypair,
-) -> Result<()> {
+async fn reclaim<T: SolanaRpcProviderNative>(rpc: &T, owner: Keypair) -> Result<()> {
     let reclaim_accounts =
         reclaim_event_account_helpers::find_claimable_accounts(&owner.pubkey(), rpc).await?;
     info!("reclaim accounts {reclaim_accounts}");
@@ -74,20 +69,9 @@ async fn reclaim<T: SolanaRpcProvider + AsRef<RpcClient> + Send + Sync>(
             tracing::warn!("Skipping account with no signature");
             continue;
         }
-        let sig = account.signature.unwrap_or_default();
+        let sig = account.signature.clone().unwrap();
         let (attest, message) = fetch_attestation(sig, None).await?;
-        let reclaim_account = reclaim_event_account(
-            ReclaimEventAccountParams::builder()
-                .attestation(attest)
-                .destination_message(message)
-                .build(),
-        );
-        let reclaim_tx = TransactionBuilder::from(
-            reclaim_account
-                .accounts(owner.pubkey(), account.address)
-                .instruction(),
-        );
-
+        let reclaim_tx: TransactionBuilder = account.instruction((attest, message)).into();
         let reclaim_tx = match (units, fee) {
             (Some(units), Some(fee)) => {
                 reclaim_tx.prepend_compute_budget_instructions(units, fee)?
@@ -155,12 +139,14 @@ fn get_keypair() -> Result<Keypair> {
 }
 
 #[allow(unused_variables)]
-async fn evm_sol(args: BridgeArgs, owner: Keypair, rpc: TraceNativeProvider) -> Result<()> {
+async fn evm_sol<T: SolanaRpcProviderNative>(args: BurnArgs, owner: Keypair, rpc: T) -> Result<()> {
     info!("TBD sending to sol");
     Ok(())
 }
 
-async fn sol_evm(args: BridgeArgs, owner: Keypair, rpc: TraceNativeProvider) -> Result<()> {
+async fn sol_evm<T: SolanaRpcProviderNative>(args: BurnArgs, owner: Keypair, rpc: T) -> Result<()> {
+    let span = tracing::info_span!("sol_evm", args =? args);
+    let _g = span.enter();
     info!("burning...");
     let message_sent_event_account = Keypair::new();
     let evm_addr: Address = Address::parse_checksummed(args.destination, None)?;
@@ -211,6 +197,30 @@ async fn sol_evm(args: BridgeArgs, owner: Keypair, rpc: TraceNativeProvider) -> 
     Ok(())
 }
 
+fn cached_rpc(rpc: RpcClient) -> impl SolanaRpcProviderNative {
+    let rpc: TraceRpcNativeProvider = rpc.into();
+    let hash_cache = BlockHashCacheProvider::new(rpc.clone(), Duration::from_secs(30));
+    let lookup_cache = LookupTableCacheProvider::builder()
+        .inner(rpc.clone())
+        .lookup_cache(
+            soly::Cache::builder()
+                .time_to_live(Duration::from_secs(86400))
+                .build(),
+        )
+        .negative_cache(
+            soly::Cache::builder()
+                .time_to_live(Duration::from_secs(600))
+                .build(),
+        )
+        .build();
+
+    SimpleCacheProvider::builder()
+        .inner(rpc.clone())
+        .blockhash_cache(hash_cache.into())
+        .lookup_cache(lookup_cache.into())
+        .build()
+}
+
 #[allow(clippy::expect_fun_call)]
 #[tokio::main]
 pub async fn main() -> Result<()> {
@@ -228,10 +238,12 @@ pub async fn main() -> Result<()> {
 
     let url = env::var("RPC_URL").expect("RPC_URL is not set");
     info!("using RPC {url}");
-    let rpc: TraceNativeProvider =
-        RpcClient::new_with_commitment(url, CommitmentConfig::finalized()).into();
+    let rpc = cached_rpc(RpcClient::new_with_commitment(
+        url,
+        CommitmentConfig::finalized(),
+    ));
     match cli.command {
-        command::Commands::Bridge(args) => {
+        command::Commands::Burn(args) => {
             if !args.to_sol {
                 sol_evm(args, owner, rpc).await
             } else {
@@ -239,26 +251,6 @@ pub async fn main() -> Result<()> {
             }
         }
         command::Commands::Reclaim => {
-            let hash_cache = BlockHashCacheProvider::new(rpc.clone(), Duration::from_secs(30));
-            let lookup_cache = LookupTableCacheProvider::builder()
-                .inner(rpc.clone())
-                .lookup_cache(
-                    soly::Cache::builder()
-                        .time_to_live(Duration::from_secs(86400))
-                        .build(),
-                )
-                .negative_cache(
-                    soly::Cache::builder()
-                        .time_to_live(Duration::from_secs(600))
-                        .build(),
-                )
-                .build();
-
-            let rpc = SimpleCacheProvider::builder()
-                .inner(rpc.clone())
-                .blockhash_cache(hash_cache.into())
-                .lookup_cache(lookup_cache.into())
-                .build();
             reclaim(&rpc, owner).await?;
             Ok(())
         }

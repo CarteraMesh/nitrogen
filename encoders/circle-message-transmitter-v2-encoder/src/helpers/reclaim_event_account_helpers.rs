@@ -9,7 +9,6 @@ use {
         rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     },
     solana_pubkey::Pubkey,
-    solana_rpc_client::nonblocking::rpc_client::RpcClient,
 };
 
 // https://github.com/circlefin/solana-cctp-contracts/blob/03f7dec786eb9affa68688954f62917edeed2e35/programs/v2/message-transmitter-v2/src/state.rs#L56
@@ -60,11 +59,14 @@ impl<T: AsRef<RpcClient> + Send + Sync> ReclaimAccountRpcState for T {
     }
 }
 
+#[tracing::instrument(level = "info", skip(rpc))]
 pub async fn find_claimable_accounts<T: ReclaimAccountRpcState>(
     owner: &Pubkey,
     rpc: &T,
 ) -> ClientResult<ReclaimAccountStatus> {
+    tracing::debug!("calling RPC for reclaim accounts");
     let accounts = rpc.get_reclaim_accounts(owner).await?;
+    tracing::debug!("found {} accounts", accounts.len());
     let mut claimable = ReclaimAccountStatus::new(*owner);
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

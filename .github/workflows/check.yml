@@ -103,8 +103,7 @@ jobs:
     # https://doc.rust-lang.org/beta/unstable-book/language-features/doc-cfg.html which allows an
     # API be documented as only available in some specific platforms.
     #
-
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER }}
     name: doc
     steps:
       - uses: actions/checkout@v5
@@ -114,17 +113,11 @@ jobs:
         with:
           cache-on-failure: "true"
           cache-all-crates: "true"
-          cache-workspace-crates: "true"
-          workspaces: |
-            . -> target
-          # Specifies what to use as the backend providing cache
-          # Can be set to "github", "buildjet", or "warpbuild"
-          # default: "github"
-          cache-bin: "true"
       - name: Install rust
         uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo-docs-rs
-        uses: dtolnay/install@cargo-docs-rs
+        run: |
+          cargo +nightly install cargo-docs-rs
       - name: cargo docs-rs
         run: |
           ./scripts/docsrs.sh
@@ -191,4 +184,4 @@ jobs:
           TEST_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
           RPC_URL: ${{ secrets.RPC_URL }}
         run: |
-          cargo run -p circle-cctp -- bridge  0x626189bcDE2392ea088Ea0BD32336994CA9a0DCc
+          cargo run -p circle-cctp -- burn  0x626189bcDE2392ea088Ea0BD32336994CA9a0DCc
