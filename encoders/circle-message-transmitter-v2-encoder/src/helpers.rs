@@ -1,5 +1,5 @@
 use {
-    crate::accounts::MessageSent,
+    crate::{accounts::MessageSent, types::ReclaimEventAccountParams},
     solana_account::Account,
     solana_pubkey::Pubkey,
     solana_rpc_client_api::client_error::Result as ClientResult,
@@ -69,6 +69,11 @@ pub struct ReclaimAccount {
     pub balance: u64,
     pub signature: Option<String>,
 }
+/// Circle CCTP stores an attestation and a message. This is used to verify your
+/// claim to USDC
+///
+/// See `curl https://iris-api-sandbox.circle.com/v2/messages/6/\?transactionHash\=0x1de765f7d19b45913190863d8cd60c1e58e48a85b60b0ff7bf39329076aabd7b  --header  'Content-Type: application/json'  | jq . ` for example
+pub type AttestationMessage = (Vec<u8>, Vec<u8>);
 
 impl Display for ReclaimAccount {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -116,6 +121,24 @@ impl ReclaimAccount {
 
     pub fn is_claimable(&self) -> bool {
         self.event_window_remaining <= 0
+    }
+
+    /// Constructs an instruction to reclaim the event account used to burn
+    /// USDC.
+    ///
+    /// See <https://developers.circle.com/cctp/solana-programs>
+    pub fn instruction(
+        &self,
+        attestation_message: AttestationMessage,
+    ) -> solana_instruction::Instruction {
+        crate::instructions::reclaim_event_account(
+            ReclaimEventAccountParams::builder()
+                .attestation(attestation_message.0)
+                .destination_message(attestation_message.1)
+                .build(),
+        )
+        .accounts(self.account.rent_payer, self.address)
+        .instruction()
     }
 }
 
