@@ -22,12 +22,12 @@ use {
     soly::{
         BlockHashCacheProvider,
         LookupTableCacheProvider,
-        SimpleCacheProvider,
-        SolanaRpcProviderNative,
-        TraceRpcNativeProvider,
+        SimpleCacheTransactionProvider,
+        TraceTransactionArcProvider,
         TransactionBuilder,
+        TransactionRpcProvider,
     },
-    std::{env, time::Duration},
+    std::{env, sync::Arc, time::Duration},
     tracing::{Level, info, span},
 };
 mod attestation;
@@ -48,7 +48,10 @@ async fn fetch_attestation(
     attestation::get_attestation_with_retry(sig, chain).await
 }
 
-async fn reclaim<T: SolanaRpcProviderNative>(rpc: &T, owner: Keypair) -> Result<()> {
+async fn reclaim<T: TransactionRpcProvider + AsRef<RpcClient>>(
+    rpc: &T,
+    owner: Keypair,
+) -> Result<()> {
     let reclaim_accounts =
         reclaim_event_account_helpers::find_claimable_accounts(&owner.pubkey(), rpc).await?;
     info!("reclaim accounts {reclaim_accounts}");
@@ -139,12 +142,12 @@ fn get_keypair() -> Result<Keypair> {
 }
 
 #[allow(unused_variables)]
-async fn evm_sol<T: SolanaRpcProviderNative>(args: BurnArgs, owner: Keypair, rpc: T) -> Result<()> {
+async fn evm_sol<T: TransactionRpcProvider>(args: BurnArgs, owner: Keypair, rpc: T) -> Result<()> {
     info!("TBD sending to sol");
     Ok(())
 }
 
-async fn sol_evm<T: SolanaRpcProviderNative>(args: BurnArgs, owner: Keypair, rpc: T) -> Result<()> {
+async fn sol_evm<T: TransactionRpcProvider>(args: BurnArgs, owner: Keypair, rpc: T) -> Result<()> {
     let span = tracing::info_span!("sol_evm", args =? args);
     let _g = span.enter();
     info!("burning...");
@@ -197,8 +200,8 @@ async fn sol_evm<T: SolanaRpcProviderNative>(args: BurnArgs, owner: Keypair, rpc
     Ok(())
 }
 
-fn cached_rpc(rpc: RpcClient) -> impl SolanaRpcProviderNative {
-    let rpc: TraceRpcNativeProvider = rpc.into();
+fn cached_rpc(rpc: RpcClient) -> impl TransactionRpcProvider + AsRef<RpcClient> {
+    let rpc: TraceTransactionArcProvider = Arc::new(rpc).into();
     let hash_cache = BlockHashCacheProvider::new(rpc.clone(), Duration::from_secs(30));
     let lookup_cache = LookupTableCacheProvider::builder()
         .inner(rpc.clone())
@@ -214,7 +217,7 @@ fn cached_rpc(rpc: RpcClient) -> impl SolanaRpcProviderNative {
         )
         .build();
 
-    SimpleCacheProvider::builder()
+    SimpleCacheTransactionProvider::builder()
         .inner(rpc.clone())
         .blockhash_cache(hash_cache.into())
         .lookup_cache(lookup_cache.into())
