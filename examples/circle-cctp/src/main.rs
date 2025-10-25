@@ -280,7 +280,6 @@ pub async fn main() -> Result<()> {
                 &owner.pubkey(),
                 "6".to_string(), // base sepolia
                 usdc_evm_addr.into_word(),
-                &TOKEN_MINTER_PROGRAM_ID,
                 &SOLANA_USDC_ADDRESS,
                 &fee_recipient,
             );
