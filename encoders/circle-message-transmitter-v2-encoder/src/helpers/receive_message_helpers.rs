@@ -82,7 +82,6 @@ pub async fn fee_recipient_token_account<T: FeeRecipientFetcher>(
 
 pub fn recv_from_attestation(
     destination_owner: Pubkey,
-    token_minter_program_id: Pubkey,
     attestation: Vec<u8>,
     message: Vec<u8>,
 ) -> InstructionBuilder<crate::instructions::receive_message::ReceiveMessage> {
@@ -100,7 +99,7 @@ pub fn recv_from_attestation(
         destination_owner,
         Pubkey::find_program_address(&[b"message_transmitter"], &crate::ID).0,
         used_nonce,
-        token_minter_program_id,
+        TOKEN_MINTER_PROGRAM_ID,
         crate::ID,
     )
 }
