@@ -24,7 +24,7 @@ solana-rpc-client-api = { workspace = true }
 solana-signer = { workspace = true }
 solana-system-interface = { workspace = true }
 soly = { version = "0.1.1-rc.2" }
-spl-memo = { workspace = true }
+#spl-memo-interface = { workspace = true }
 spl-token = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
