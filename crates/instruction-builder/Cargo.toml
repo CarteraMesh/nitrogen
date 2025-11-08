@@ -20,7 +20,7 @@ solana-pubkey = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
-spl-memo = { workspace = true }
+spl-memo-interface = { workspace = true }
 
 [lints]
 workspace = true

@@ -70,7 +70,7 @@ mod tests {
         ];
 
         let instruction_builder = InstructionBuilder::builder()
-            .program_id(spl_memo::id())
+            .program_id(spl_memo_interface::v3::id())
             .accounts(base_accounts.clone())
             .params(memo)
             .build()
@@ -83,7 +83,7 @@ mod tests {
             instruction.accounts.len(),
             base_accounts.len() + remaining_accounts.len()
         );
-        assert_eq!(instruction.program_id, spl_memo::id());
+        assert_eq!(instruction.program_id, spl_memo_interface::v3::id());
     }
 
     #[test]
@@ -92,13 +92,13 @@ mod tests {
         let accounts = vec![AccountMeta::new_readonly(Pubkey::new_unique(), true)];
 
         let builder = InstructionBuilder::builder()
-            .program_id(spl_memo::id())
+            .program_id(spl_memo_interface::v3::id())
             .accounts(accounts.clone())
             .params(memo)
             .build();
 
         let instruction = builder.instruction();
-        assert_eq!(instruction.program_id, spl_memo::id());
+        assert_eq!(instruction.program_id, spl_memo_interface::v3::id());
         assert_eq!(instruction.accounts.len(), accounts.len());
     }
 }
