@@ -1,6 +1,6 @@
 [package]
 name = "nitrogen-circle-message-transmitter-v2-encoder"
-version = "0.1.2"
+version = "0.1.3"
 edition = { workspace = true }
 description = "nitrogen-circle-message-transmitter-v2-encoder"
 license = { workspace = true }
