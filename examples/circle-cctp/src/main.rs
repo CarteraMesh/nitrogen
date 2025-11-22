@@ -35,7 +35,7 @@ mod command;
 
 pub fn memo(message: &str) -> Instruction {
     Instruction {
-        program_id: spl_memo::id(),
+        program_id: spl_memo_interface::v3::ID,
         accounts: vec![],
         data: message.as_bytes().to_vec(),
     }
