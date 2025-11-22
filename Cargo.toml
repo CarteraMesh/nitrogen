@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/*", "encoders/*" ]
+members = ["crates/*", "encoders/*" , "examples/*" ]
 resolver = "2"
 
 [workspace.package]
@@ -48,7 +48,7 @@ solana-address-lookup-table-interface = { version = "3", features = [
 solana-compute-budget-interface = { version = "3" }
 solana-client = "3"
 solana-commitment-config = "3"
-solana-hash = "2"
+solana-hash = "3"
 solana-instruction = { version = "3", default-features = false, features = ["borsh", "std"] }
 solana-message = { version = "3" }
 solana-pubkey = { version = "3", features = ["serde", "borsh", "curve25519"] }
