@@ -265,12 +265,8 @@ pub async fn main() -> Result<()> {
                 alloy_primitives::hex::encode(&attest),
                 alloy_primitives::hex::encode(&message),
             );
-            let builder = receive_message_helpers::recv_from_attestation(
-                owner.pubkey(),
-                TOKEN_MINTER_PROGRAM_ID,
-                attest,
-                message,
-            );
+            let builder =
+                receive_message_helpers::recv_from_attestation(owner.pubkey(), attest, message);
             let fee_recipient =
                 receive_message_helpers::fee_recipient_token_account(&rpc, &SOLANA_USDC_ADDRESS)
                     .await?;
